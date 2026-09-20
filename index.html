@@ -607,6 +607,28 @@ function renderDayList() {
 renderDayList();
 renderNavCalendars();
 setupScrollspy();
+
+// Land on the most recent logged day by default -- this is always the
+// same day the email's summary was drawn from, so no URL parameter or
+// generation-time tagging is needed at all.
+//
+// Wait for fonts to finish loading (and one extra animation frame for
+// layout to settle) before scrolling -- calling scrollIntoView() before
+// the page's true height is established can get silently overridden
+// by a later layout shift, with no error thrown.
+if (allDates.length > 0) {
+  const targetDate = allDates[allDates.length - 1];
+  const doScroll = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToDay(targetDate));
+    });
+  };
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(doScroll);
+  } else {
+    doScroll();
+  }
+}
 </script>
 
 </body>
