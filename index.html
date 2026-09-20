@@ -461,9 +461,9 @@ function renderNavCalendars() {
   });
 }
 
-function scrollToDay(dateStr) {
+function scrollToDay(dateStr, instant = false) {
   const el = document.querySelector(`.day-block[data-date="${dateStr}"]`);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (el) el.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'start' });
 }
 
 // ---------- Scrollspy ----------
@@ -620,7 +620,7 @@ if (allDates.length > 0) {
   const targetDate = allDates[allDates.length - 1];
   const doScroll = () => {
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => scrollToDay(targetDate));
+      requestAnimationFrame(() => scrollToDay(targetDate, true));
     });
   };
   if (document.fonts && document.fonts.ready) {
