@@ -487,7 +487,7 @@
     <div class="app">
       <aside class="sidebar">
         <h1>Nutrition Report</h1>
-        <p class="subtitle">Aug 21 &ndash; Sep 18, 2026</p>
+        <p class="subtitle" id="reportSubtitle"></p>
 
         <button class="print-btn" onclick="openPrintModal()">
           Print / Export&hellip;
@@ -595,6 +595,26 @@
 
       const allDates = Object.keys(DATA).sort();
       let activeDate = allDates[0];
+
+      // Subtitle: number of logged days and their date range
+      (function fillSubtitle() {
+        const el = document.getElementById("reportSubtitle");
+        if (!el || allDates.length === 0) return;
+        const sorted = [...allDates].sort();
+        const first = sorted[0];
+        const last = sorted[sorted.length - 1];
+        const fmt = (s, withYear) => {
+          const [y, m, d] = s.split("-").map(Number);
+          const opts = withYear
+            ? { month: "short", day: "numeric", year: "numeric" }
+            : { month: "short", day: "numeric" };
+          return new Date(y, m - 1, d).toLocaleDateString("en-US", opts);
+        };
+        const sameYear = first.slice(0, 4) === last.slice(0, 4);
+        el.textContent =
+          `${allDates.length} days logged · ` +
+          `${fmt(first, !sameYear)} – ${fmt(last, true)}`;
+      })();
       let printSelected = new Set(allDates); // defaults to everything, matching the "here's my two months" framing
 
       function daysInMonth(year, month) {
