@@ -809,13 +809,38 @@
         container.appendChild(buildWeekStrip("nav"));
       }
 
+      // A click sets the highlight itself; the scrollspy stays paused
+      // until the resulting scroll has stopped, so it can't override it.
+      let spyPaused = false;
+      let spyResumeTimer = null;
+      function resumeSpy() {
+        spyPaused = false;
+      }
+      function pauseSpyUntilScrollStops() {
+        spyPaused = true;
+        clearTimeout(spyResumeTimer);
+        spyResumeTimer = setTimeout(resumeSpy, 400);
+      }
+      document.addEventListener(
+        "scroll",
+        () => {
+          if (!spyPaused) return;
+          clearTimeout(spyResumeTimer);
+          spyResumeTimer = setTimeout(resumeSpy, 200);
+        },
+        true,
+      );
+
       function scrollToDay(dateStr, instant = false) {
         const el = document.querySelector(`.day-block[data-date="${dateStr}"]`);
-        if (el)
-          el.scrollIntoView({
-            behavior: instant ? "instant" : "smooth",
-            block: "start",
-          });
+        if (!el) return;
+        activeDate = dateStr;
+        renderNavCalendars();
+        pauseSpyUntilScrollStops();
+        el.scrollIntoView({
+          behavior: instant ? "instant" : "smooth",
+          block: "start",
+        });
       }
 
       // ---------- Scrollspy ----------
@@ -824,6 +849,7 @@
         if (observer) observer.disconnect();
         observer = new IntersectionObserver(
           (entries) => {
+            if (spyPaused) return;
             entries.forEach((entry) => {
               if (entry.isIntersecting) {
                 const d = entry.target.dataset.date;
