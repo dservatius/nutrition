@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nutrition Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #faf7f2;
+        --paper-raised: #ffffff;
+        --ink: #2b2622;
+        --ink-soft: #6b6259;
+        --line: #ddd6cb;
+        --sage: #5c6e4f;
+        --sage-bg: #eaede4;
+        --amber: #b8863c;
+        --amber-bg: #f5ebd8;
+        --brick: #a34f3f;
+        --brick-bg: #f3e4e0;
+        --disabled: #c9c2b8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      h1,
+      h2,
+      h3,
+      .serif {
+        font-family: "Newsreader", serif;
+      }
+
+      .app {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* ---------- Sidebar (navigation only) ---------- */
+      .sidebar {
+        width: 300px;
+        flex-shrink: 0;
+        background: var(--paper-raised);
+        border-right: 1px solid var(--line);
+        padding: 28px 22px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+      }
+      .sidebar h1 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      .sidebar .subtitle {
+        color: var(--ink-soft);
+        font-size: 0.85rem;
+        margin: 0 0 20px;
+      }
+
+      .print-btn {
+        width: 100%;
+        font-family: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 10px;
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: var(--paper-raised);
+        border-radius: 5px;
+        cursor: pointer;
+        margin-bottom: 22px;
+      }
+      .print-btn:hover {
+        opacity: 0.85;
+      }
+
+      .month-block {
+        margin-bottom: 26px;
+      }
+      .month-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 0 0 10px;
+      }
+      .weekday-row,
+      .week-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+      }
+      .weekday-row {
+        margin-bottom: 4px;
+      }
+      .weekday-row span {
+        font-size: 0.68rem;
+        color: var(--ink-soft);
+        text-align: center;
+      }
+      .week-row {
+        margin-bottom: 3px;
+      }
+      .day-cell {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        border-radius: 5px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        background: transparent;
+        color: var(--ink);
+        font-family: inherit;
+      }
+      .day-cell.empty {
+        visibility: hidden;
+      }
+      .day-cell.no-data {
+        color: var(--disabled);
+        cursor: default;
+      }
+      .day-cell.has-data {
+        border-color: var(--line);
+        font-weight: 500;
+      }
+      .day-cell.has-data:hover {
+        border-color: var(--sage);
+      }
+      .day-cell.active-day {
+        background: var(--sage);
+        border-color: var(--sage);
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .legend {
+        margin-top: 18px;
+        font-size: 0.72rem;
+        color: var(--ink-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .legend span.swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      /* ---------- Main content: continuous scroll ---------- */
+      .main {
+        flex: 1;
+        padding: 40px 48px 80px;
+        max-width: 760px;
+      }
+      .main-header {
+        margin-bottom: 36px;
+      }
+      .main-header h2 {
+        font-size: 1.7rem;
+        font-weight: 600;
+        margin: 0 0 6px;
+      }
+      .main-header p {
+        color: var(--ink-soft);
+        margin: 0;
+        font-size: 0.92rem;
+      }
+
+      .day-block {
+        background: var(--paper-raised);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 26px 28px;
+        margin-bottom: 22px;
+        scroll-margin-top: 24px;
+      }
+      .day-block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 4px;
+      }
+      .day-date {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+      }
+      .day-note {
+        font-size: 0.72rem;
+        color: var(--amber);
+        margin: 0 0 16px;
+      }
+
+      .meal-group {
+        display: grid;
+        grid-template-columns: 58px 1fr;
+        column-gap: 10px;
+        margin-bottom: 10px;
+      }
+      .meal-label {
+        grid-column: 1;
+        grid-row: 1 / -1;
+        align-self: start;
+        padding-top: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        line-height: 1.3;
+      }
+      .meal-label .meal-cal {
+        display: block;
+        font-weight: 400;
+      }
+      .meal-items {
+        grid-column: 2;
+      }
+      .item-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 0;
+        font-size: 0.88rem;
+        border-bottom: 1px solid #f0ece4;
+      }
+      .item-row:last-child {
+        border-bottom: none;
+      }
+      .item-name {
+        color: var(--ink);
+      }
+      .item-meta {
+        color: var(--ink-soft);
+        white-space: nowrap;
+        margin-left: 14px;
+      }
+
+      .summary-compact {
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .summary-row + .summary-row {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #f0ece4;
+      }
+      .metric-cell {
+        padding: 0 10px;
+        border-right: 1px solid #f0ece4;
+      }
+      .metric-cell:last-child {
+        border-right: none;
+      }
+      .metric-cell:first-child {
+        padding-left: 0;
+      }
+      .metric-label {
+        font-size: 0.6rem;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .metric-value {
+        font-size: 0.88rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .metric-dot {
+        font-family: Arial, sans-serif;
+        font-size: 18px;
+        line-height: 1;
+        margin-left: 5px;
+        vertical-align: middle;
+      }
+      .dot-ok {
+        color: #3ddc84;
+      }
+      .dot-low {
+        color: #ffc700;
+      }
+      .dot-high {
+        color: #ff3b30;
+      }
+      .metric-dot::before {
+        content: "\25CF";
+      }
+      .metric-target {
+        font-size: 0.6rem;
+        color: var(--ink-soft);
+      }
+
+      .cal-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        margin-left: 12px;
+      }
+
+      /* ---------- Print-scope modal ---------- */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(43, 38, 34, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal {
+        background: var(--paper-raised);
+        border-radius: 10px;
+        padding: 28px 30px;
+        width: 780px;
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+      .modal h3 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      .modal .modal-sub {
+        color: var(--ink-soft);
+        font-size: 0.85rem;
+        margin: 0 0 18px;
+      }
+      .modal-bulk {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      .modal-bulk button {
+        flex: 1;
+        font-family: inherit;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 8px 4px;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        color: var(--ink);
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .modal-calendars {
+        display: flex;
+        gap: 24px;
+      }
+      .modal-calendars .month-block {
+        flex: 1;
+        margin-bottom: 0;
+      }
+      .modal-week-row {
+        display: grid;
+        grid-template-columns: 18px repeat(7, 1fr);
+        gap: 3px;
+        margin-bottom: 3px;
+        align-items: center;
+      }
+      .week-toggle {
+        width: 16px;
+        height: 16px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--paper);
+        cursor: pointer;
+        padding: 0;
+      }
+      .week-toggle:hover {
+        border-color: var(--sage);
+      }
+
+      /* Week strip: month-change step line and month label on the 1st */
+      .week-strip .day-cell.month-first-week {
+        box-shadow: inset 0 2px 0 rgba(128, 128, 128, 0.8);
+      }
+      .week-strip .day-cell.month-first-week.month-start-mid {
+        box-shadow:
+          inset 0 2px 0 rgba(128, 128, 128, 0.8),
+          inset 2px 0 0 rgba(128, 128, 128, 0.8);
+      }
+      .week-strip .day-cell.month-start {
+        font-weight: bold;
+        font-size: 0.75em;
+      }
+      .day-cell.selected {
+        background: var(--sage);
+        border-color: var(--sage);
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      .modal-footer .count {
+        font-size: 0.8rem;
+        color: var(--ink-soft);
+      }
+      .modal-footer .actions {
+        display: flex;
+        gap: 10px;
+      }
+      .btn-secondary,
+      .btn-primary {
+        font-family: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 9px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .btn-secondary {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        color: var(--ink);
+      }
+      .btn-primary {
+        background: var(--ink);
+        border: 1px solid var(--ink);
+        color: var(--paper-raised);
+      }
+
+      /* ---------- Print ---------- */
+      @page {
+        margin: 0.5in;
+      }
+      @media print {
+        .sidebar,
+        .modal-overlay,
+        .main-header {
+          display: none !important;
+        }
+        .main {
+          max-width: 100%;
+          padding: 0;
+        }
+        .day-block {
+          break-inside: avoid;
+          border: none;
+          border-bottom: none;
+          border-radius: 0;
+        }
+        .day-block.print-exclude {
+          display: none !important;
+        }
+        .day-block.page-break-before {
+          break-before: page;
+        }
+        body {
+          background: #fff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <h1>Nutrition Report</h1>
+        <p class="subtitle" id="reportSubtitle"></p>
+
+        <button class="print-btn" onclick="openPrintModal()">
+          Print / Export&hellip;
+        </button>
+
+        <div id="navCalendars"></div>
+
+        <div class="legend">
+          <div>
+            <span class="swatch" style="background: var(--sage)"></span>Day
+            currently in view
+          </div>
+          <div>
+            <span class="swatch" style="border: 1px solid var(--line)"></span
+            >Has data
+          </div>
+          <div>
+            <span class="swatch" style="color: var(--disabled)">&middot;</span
+            >No entries logged
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="main-header">
+          <h2>Daily detail</h2>
+          <p>
+            Scroll to browse every logged day. Use &ldquo;Print / Export&rdquo;
+            to choose which days to print.
+          </p>
+        </div>
+        <div id="dayList"></div>
+      </main>
+    </div>
+
+    <div class="modal-overlay" id="printModal">
+      <div class="modal">
+        <h3>Choose days to print</h3>
+        <p class="modal-sub">
+          Browsing is unaffected &mdash; this only sets what gets printed.
+        </p>
+
+        <div class="modal-bulk">
+          <button onclick="printSelectAll()">Select all</button>
+          <button onclick="printSelectNone()">Select none</button>
+        </div>
+
+        <div class="modal-calendars" id="modalCalendars"></div>
+
+        <div class="modal-footer">
+          <span class="count" id="printCount"></span>
+          <div class="actions">
+            <button class="btn-secondary" onclick="closePrintModal()">
+              Cancel
+            </button>
+            <button class="btn-primary" onclick="doPrint()">
+              Print selected
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const WINDOW_END = "2026-10-28";
+      const WINDOW_START = "2026-08-30";
+
+      const DATA = {"2026-08-30": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}], "meal_cal": 414.0}, {"meal": 2, "items": [{"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}, {"name": "Cucumber English", "grams": 100.0, "cal": 15.0, "fat": 0.1, "sodium": 2.0, "carb": 3.6, "fiber": 0.5, "protein": 0.7}, {"name": "Cracker - Shredded Wheat", "grams": 28.0, "cal": 120.0, "fat": 3.5, "sodium": 170.0, "carb": 20.0, "fiber": 3.0, "protein": 3.0}, {"name": "Applesauce (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}], "meal_cal": 349.9}, {"meal": 3, "items": [{"name": "Turkey Sausage Lasagna (Cafe Steamers)", "grams": 283.0, "cal": 290.0, "fat": 6.0, "sodium": 490.0, "carb": 42.99, "fiber": 3.99, "protein": 15.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Rice - Brown & Wild (Minute)", "grams": 125.0, "cal": 220.0, "fat": 3.0, "sodium": 120.0, "carb": 42.0, "fiber": 3.0, "protein": 5.0}, {"name": "Tomatoes Slicing", "grams": 148.0, "cal": 25.0, "fat": 0.0, "sodium": 20.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}], "meal_cal": 570.0}, {"meal": 4, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Eggs (Vital Farms)", "grams": 50.0, "cal": 70.0, "fat": 5.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}], "meal_cal": 220.0}], "totals": {"cal": 1553.9, "fat": 32.6, "sodium": 2008.1, "carb": 252.6, "fiber": 36.5, "protein": 74.2}, "had_duplicates": false}, "2026-08-31": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Egg - Hard-Boiled Organic", "grams": 88.0, "cal": 136.0, "fat": 8.0, "sodium": 120.0, "carb": 0.0, "fiber": 0.0, "protein": 12.0}], "meal_cal": 466.0}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Lentils - Organic Canned (GV)", "grams": 130.0, "cal": 110.0, "fat": 0.0, "sodium": 115.0, "carb": 21.06, "fiber": 2.99, "protein": 7.02}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Cracker - Shredded Wheat", "grams": 28.0, "cal": 120.0, "fat": 3.5, "sodium": 170.0, "carb": 20.0, "fiber": 3.0, "protein": 3.0}, {"name": "Orange Navel", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}], "meal_cal": 431.0}, {"meal": 3, "items": [{"name": "Turkey Sausage Lasagna (Cafe Steamers)", "grams": 283.0, "cal": 290.0, "fat": 6.0, "sodium": 490.0, "carb": 42.99, "fiber": 3.99, "protein": 15.0}, {"name": "Rice - Brown & Wild (Minute)", "grams": 125.0, "cal": 220.0, "fat": 3.0, "sodium": 120.0, "carb": 42.0, "fiber": 3.0, "protein": 5.0}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}, {"name": "Applesauce (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 590.0}, {"meal": 4, "items": [{"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}, {"name": "Half & Half (GV)", "grams": 30.9, "cal": 40.0, "fat": 3.5, "sodium": 25.0, "carb": 1.0, "fiber": 0.0, "protein": 1.0}], "meal_cal": 74.0}], "totals": {"cal": 1561.0, "fat": 28.4, "sodium": 1942.8, "carb": 253.9, "fiber": 34.5, "protein": 77.9}, "had_duplicates": false}, "2026-09-02": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}], "meal_cal": 330.0}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}], "meal_cal": 175.0}, {"meal": 3, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Rice - Brown & Wild (Minute)", "grams": 125.0, "cal": 220.0, "fat": 3.0, "sodium": 120.0, "carb": 42.0, "fiber": 3.0, "protein": 5.0}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 387.0}, {"meal": 4, "items": [{"name": "Olive Garden Broccoli (Saut\u00e9ed)", "grams": 115.0, "cal": 150.0, "fat": 13.0, "sodium": 220.0, "carb": 8.0, "fiber": 3.0, "protein": 4.0}, {"name": "Olive Garden Spaghetti with Meat Sauce (Lunch)", "grams": 400.0, "cal": 480.0, "fat": 17.0, "sodium": 790.0, "carb": 64.0, "fiber": 3.0, "protein": 19.0}], "meal_cal": 630.0}], "totals": {"cal": 1522.0, "fat": 38.2, "sodium": 1870.0, "carb": 234.0, "fiber": 32.0, "protein": 72.2}, "had_duplicates": false}, "2026-09-03": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}], "meal_cal": 530.0}, {"meal": 2, "items": [{"name": "Rice - Brown & Wild (Minute)", "grams": 125.0, "cal": 220.0, "fat": 3.0, "sodium": 120.0, "carb": 42.0, "fiber": 3.0, "protein": 5.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Cracker - Shredded Wheat", "grams": 28.0, "cal": 120.0, "fat": 3.5, "sodium": 170.0, "carb": 20.0, "fiber": 3.0, "protein": 3.0}], "meal_cal": 537.0}, {"meal": 3, "items": [{"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}], "meal_cal": 239.9}, {"meal": 4, "items": [{"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}, {"name": "Chicken - Chunk (Kirkland)", "grams": 90.0, "cal": 96.4, "fat": 1.61, "sodium": 433.9, "carb": 0.0, "fiber": 0.0, "protein": 20.89}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 80.0, "cal": 16.7, "fat": 0.0, "sodium": 146.7, "carb": 3.34, "fiber": 0.66, "protein": 0.66}, {"name": "Tzatziki Dip - Traditional", "grams": 28.0, "cal": 35.0, "fat": 1.5, "sodium": 95.0, "carb": 3.0, "fiber": 0.0, "protein": 2.0}], "meal_cal": 182.1}], "totals": {"cal": 1489.0, "fat": 39.5, "sodium": 1951.6, "carb": 207.5, "fiber": 30.6, "protein": 88.6}, "had_duplicates": false}, "2026-09-06": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}], "meal_cal": 348.0}, {"meal": 2, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Crackers - Almond Flour", "grams": 30.0, "cal": 150.0, "fat": 9.0, "sodium": 230.0, "carb": 17.0, "fiber": 2.0, "protein": 3.0}], "meal_cal": 465.0}, {"meal": 3, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Orange Navel", "grams": 105.0, "cal": 51.6, "fat": 0.16, "sodium": 1.1, "carb": 13.18, "fiber": 2.29, "protein": 0.96}, {"name": "Cracker - Shredded Wheat", "grams": 14.0, "cal": 60.0, "fat": 1.75, "sodium": 85.0, "carb": 10.0, "fiber": 1.5, "protein": 1.5}], "meal_cal": 461.6}, {"meal": 4, "items": [{"name": "Cottage Cheese 2% (Daisy)", "grams": 80.0, "cal": 63.7, "fat": 1.77, "sodium": 233.6, "carb": 3.54, "fiber": 0.0, "protein": 9.2}, {"name": "Cucumber", "grams": 200.0, "cal": 29.9, "fat": 0.0, "sodium": 4.0, "carb": 7.3, "fiber": 1.32, "protein": 1.32}, {"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}, {"name": "Lentils - Dry (Food to Live)", "grams": 104.0, "cal": 93.6, "fat": 0.56, "sodium": 52.0, "carb": 15.2, "fiber": 4.8, "protein": 6.96}, {"name": "Tomatoes Slicing", "grams": 70.0, "cal": 11.8, "fat": 0.0, "sodium": 9.5, "carb": 2.37, "fiber": 0.47, "protein": 0.47}], "meal_cal": 218.4}], "totals": {"cal": 1493.0, "fat": 49.9, "sodium": 1737.3, "carb": 195.1, "fiber": 30.4, "protein": 82.9}, "had_duplicates": false}, "2026-09-07": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Orange Navel - Peeled", "grams": 105.0, "cal": 51.6, "fat": 0.16, "sodium": 1.1, "carb": 13.18, "fiber": 2.29, "protein": 0.96}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 14.0, "cal": 85.0, "fat": 8.0, "sodium": 20.0, "carb": 2.5, "fiber": 1.5, "protein": 3.0}], "meal_cal": 366.6}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 17.0, "cal": 103.0, "fat": 8.76, "sodium": 28.3, "carb": 3.61, "fiber": 1.55, "protein": 4.12}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Cracker - Shredded Wheat", "grams": 14.0, "cal": 60.0, "fat": 1.75, "sodium": 85.0, "carb": 10.0, "fiber": 1.5, "protein": 1.5}], "meal_cal": 373.0}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Eggs (Vital Farms)", "grams": 50.0, "cal": 70.0, "fat": 5.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}], "meal_cal": 370.0}, {"meal": 4, "items": [{"name": "Brussels Sprouts Frozen", "grams": 62.0, "cal": 25.5, "fat": 0.0, "sodium": 10.9, "carb": 5.11, "fiber": 2.19, "protein": 2.19}, {"name": "Chicken - Chunk (Kirkland)", "grams": 70.0, "cal": 75.0, "fat": 1.25, "sodium": 337.5, "carb": 0.0, "fiber": 0.0, "protein": 16.25}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 80.0, "cal": 63.7, "fat": 1.77, "sodium": 233.6, "carb": 3.54, "fiber": 0.0, "protein": 9.2}, {"name": "Cucumber", "grams": 123.0, "cal": 18.4, "fat": 0.0, "sodium": 2.4, "carb": 4.49, "fiber": 0.81, "protein": 0.81}, {"name": "Egg - Hard-Boiled Organic", "grams": 41.0, "cal": 63.4, "fat": 3.73, "sodium": 55.9, "carb": 0.0, "fiber": 0.0, "protein": 5.59}, {"name": "Lentils - Dry (Food to Live)", "grams": 104.0, "cal": 93.6, "fat": 0.56, "sodium": 52.0, "carb": 15.2, "fiber": 4.8, "protein": 6.96}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 80.0, "cal": 16.7, "fat": 0.0, "sodium": 146.7, "carb": 3.34, "fiber": 0.66, "protein": 0.66}], "meal_cal": 356.3}], "totals": {"cal": 1465.9, "fat": 38.5, "sodium": 1693.4, "carb": 207.0, "fiber": 31.3, "protein": 88.2}, "had_duplicates": false}, "2026-09-09": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}, {"name": "Tzatziki Dip - Traditional", "grams": 28.0, "cal": 35.0, "fat": 1.5, "sodium": 95.0, "carb": 3.0, "fiber": 0.0, "protein": 2.0}, {"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}], "meal_cal": 466.4}, {"meal": 2, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}], "meal_cal": 435.0}, {"meal": 3, "items": [{"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Eggs (Vital Farms)", "grams": 50.0, "cal": 70.0, "fat": 5.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Orange Navel - Peeled", "grams": 88.0, "cal": 43.2, "fat": 0.13, "sodium": 0.9, "carb": 11.04, "fiber": 1.92, "protein": 0.8}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}], "meal_cal": 407.1}, {"meal": 4, "items": [{"name": "Chili - Black Bean w/ Quinoa (Deli)", "grams": 240.0, "cal": 117.6, "fat": 2.45, "sodium": 529.0, "carb": 21.55, "fiber": 4.9, "protein": 4.9}, {"name": "Onion - Green Raw", "grams": 30.0, "cal": 9.6, "fat": 0.0, "sodium": 4.8, "carb": 2.2, "fiber": 0.8, "protein": 0.6}, {"name": "Pepper - Green Bell", "grams": 50.0, "cal": 10.0, "fat": 0.08, "sodium": 1.5, "carb": 2.32, "fiber": 0.85, "protein": 0.43}, {"name": "Tomatoes Slicing", "grams": 100.0, "cal": 16.9, "fat": 0.0, "sodium": 13.5, "carb": 3.38, "fiber": 0.68, "protein": 0.68}], "meal_cal": 154.1}], "totals": {"cal": 1462.6, "fat": 44.7, "sodium": 2113.8, "carb": 195.3, "fiber": 31.0, "protein": 86.1}, "had_duplicates": false}, "2026-09-10": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}], "meal_cal": 484.0}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 17.0, "cal": 103.0, "fat": 8.76, "sodium": 28.3, "carb": 3.61, "fiber": 1.55, "protein": 4.12}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}], "meal_cal": 402.9}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}], "meal_cal": 385.0}, {"meal": 4, "items": [{"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}, {"name": "Cucumber", "grams": 100.0, "cal": 14.9, "fat": 0.0, "sodium": 2.0, "carb": 3.65, "fiber": 0.66, "protein": 0.66}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}, {"name": "Onion - Green Raw", "grams": 20.0, "cal": 6.4, "fat": 0.0, "sodium": 3.2, "carb": 1.47, "fiber": 0.53, "protein": 0.4}, {"name": "Tomatoes Slicing", "grams": 80.0, "cal": 13.5, "fat": 0.0, "sodium": 10.8, "carb": 2.7, "fiber": 0.54, "protein": 0.54}], "meal_cal": 191.2}], "totals": {"cal": 1463.1, "fat": 42.1, "sodium": 1658.4, "carb": 209.1, "fiber": 31.2, "protein": 81.1}, "had_duplicates": false}, "2026-09-11": {"meals": [{"meal": 1, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Grapefruit", "grams": 120.0, "cal": 40.0, "fat": 0.1, "sodium": 0.0, "carb": 9.0, "fiber": 1.4, "protein": 1.2}], "meal_cal": 388.0}, {"meal": 2, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 112.0, "cal": 63.6, "fat": 0.38, "sodium": 0.8, "carb": 15.89, "fiber": 3.02, "protein": 0.76}, {"name": "Applesauce - Cinnamon Unsweetened (365)", "grams": 113.0, "cal": 70.0, "fat": 0.0, "sodium": 20.0, "carb": 18.0, "fiber": 2.0, "protein": 0.0}], "meal_cal": 363.6}, {"meal": 3, "items": [{"name": "Soup - Butternut Squash (Deli)", "grams": 245.0, "cal": 140.0, "fat": 8.99, "sodium": 650.0, "carb": 16.0, "fiber": 2.01, "protein": 2.01}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}], "meal_cal": 394.0}, {"meal": 4, "items": [{"name": "Brussels Sprouts Frozen", "grams": 70.0, "cal": 28.8, "fat": 0.0, "sodium": 12.4, "carb": 5.77, "fiber": 2.47, "protein": 2.47}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Cucumber", "grams": 115.0, "cal": 17.2, "fat": 0.0, "sodium": 2.3, "carb": 4.2, "fiber": 0.76, "protein": 0.76}, {"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 92.0, "cal": 86.6, "fat": 1.62, "sodium": 259.8, "carb": 0.0, "fiber": 0.0, "protein": 18.4}, {"name": "Tomatoes Slicing", "grams": 60.0, "cal": 10.1, "fat": 0.0, "sodium": 8.1, "carb": 2.03, "fiber": 0.41, "protein": 0.41}], "meal_cal": 319.7}], "totals": {"cal": 1465.3, "fat": 41.0, "sodium": 1999.4, "carb": 204.1, "fiber": 33.0, "protein": 86.5}, "had_duplicates": false}, "2026-09-12": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 150.0, "cal": 85.1, "fat": 0.51, "sodium": 1.0, "carb": 21.29, "fiber": 4.05, "protein": 1.02}], "meal_cal": 315.1}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}], "meal_cal": 441.0}, {"meal": 3, "items": [{"name": "Eggs (Vital Farms)", "grams": 100.0, "cal": 140.0, "fat": 10.0, "sodium": 140.0, "carb": 0.0, "fiber": 0.0, "protein": 12.0}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}], "meal_cal": 399.9}, {"meal": 4, "items": [{"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Chili - Black Bean w/ Quinoa (Deli)", "grams": 144.0, "cal": 70.5, "fat": 1.47, "sodium": 317.4, "carb": 12.93, "fiber": 2.94, "protein": 2.94}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 40.0, "cal": 8.3, "fat": 0.0, "sodium": 73.3, "carb": 1.67, "fiber": 0.33, "protein": 0.33}], "meal_cal": 306.8}], "totals": {"cal": 1462.8, "fat": 40.7, "sodium": 1838.4, "carb": 196.6, "fiber": 30.9, "protein": 93.3}, "had_duplicates": false}, "2026-09-13": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}], "meal_cal": 430.0}, {"meal": 2, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Grapefruit", "grams": 120.0, "cal": 40.0, "fat": 0.1, "sodium": 0.0, "carb": 9.0, "fiber": 1.4, "protein": 1.2}], "meal_cal": 377.0}, {"meal": 3, "items": [{"name": "Cracker - Shredded Wheat", "grams": 28.0, "cal": 120.0, "fat": 3.5, "sodium": 170.0, "carb": 20.0, "fiber": 3.0, "protein": 3.0}, {"name": "Applesauce - Cinnamon Unsweetened (365)", "grams": 113.0, "cal": 70.0, "fat": 0.0, "sodium": 20.0, "carb": 18.0, "fiber": 2.0, "protein": 0.0}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}], "meal_cal": 395.0}, {"meal": 4, "items": [{"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 60.0, "cal": 12.5, "fat": 0.0, "sodium": 110.0, "carb": 2.5, "fiber": 0.5, "protein": 0.5}], "meal_cal": 282.5}], "totals": {"cal": 1484.5, "fat": 53.8, "sodium": 1725.0, "carb": 181.5, "fiber": 31.9, "protein": 83.4}, "had_duplicates": false}, "2026-09-14": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}], "meal_cal": 434.0}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Applesauce - Cinnamon Unsweetened (365)", "grams": 113.0, "cal": 70.0, "fat": 0.0, "sodium": 20.0, "carb": 18.0, "fiber": 2.0, "protein": 0.0}], "meal_cal": 430.0}, {"meal": 3, "items": [{"name": "Turkey Sausage Lasagna (Cafe Steamers)", "grams": 283.0, "cal": 290.0, "fat": 6.0, "sodium": 490.0, "carb": 42.99, "fiber": 3.99, "protein": 15.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}], "meal_cal": 413.9}, {"meal": 4, "items": [{"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}, {"name": "Lentils - Dry (Food to Live)", "grams": 120.0, "cal": 108.0, "fat": 0.65, "sodium": 60.0, "carb": 17.54, "fiber": 5.54, "protein": 8.03}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Watermelon", "grams": 150.0, "cal": 45.0, "fat": 0.23, "sodium": 1.5, "carb": 11.32, "fiber": 0.6, "protein": 0.92}], "meal_cal": 197.4}], "totals": {"cal": 1475.3, "fat": 48.0, "sodium": 1720.6, "carb": 200.7, "fiber": 30.9, "protein": 78.1}, "had_duplicates": false}, "2026-09-15": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Grapefruit", "grams": 120.0, "cal": 40.0, "fat": 0.1, "sodium": 0.0, "carb": 9.0, "fiber": 1.4, "protein": 1.2}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 16.0, "cal": 97.1, "fat": 9.14, "sodium": 22.9, "carb": 2.86, "fiber": 1.71, "protein": 3.43}], "meal_cal": 367.1}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Eggs (Vital Farms)", "grams": 100.0, "cal": 140.0, "fat": 10.0, "sodium": 140.0, "carb": 0.0, "fiber": 0.0, "protein": 12.0}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}], "meal_cal": 526.6}, {"meal": 3, "items": [{"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Applesauce - Cinnamon Unsweetened (365)", "grams": 113.0, "cal": 70.0, "fat": 0.0, "sodium": 20.0, "carb": 18.0, "fiber": 2.0, "protein": 0.0}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}], "meal_cal": 446.0}, {"meal": 4, "items": [{"name": "Blueberries", "grams": 100.0, "cal": 56.8, "fat": 0.34, "sodium": 0.7, "carb": 14.19, "fiber": 2.7, "protein": 0.68}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}, {"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}, {"name": "Watermelon", "grams": 150.0, "cal": 45.0, "fat": 0.23, "sodium": 1.5, "carb": 11.32, "fiber": 0.6, "protein": 0.92}], "meal_cal": 155.2}], "totals": {"cal": 1494.9, "fat": 55.6, "sodium": 1354.9, "carb": 196.7, "fiber": 32.9, "protein": 72.8}, "had_duplicates": false}, "2026-09-16": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 17.0, "cal": 103.0, "fat": 8.76, "sodium": 28.3, "carb": 3.61, "fiber": 1.55, "protein": 4.12}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}], "meal_cal": 380.1}, {"meal": 2, "items": [{"name": "Turkey Sausage Lasagna (Cafe Steamers)", "grams": 283.0, "cal": 290.0, "fat": 6.0, "sodium": 490.0, "carb": 42.99, "fiber": 3.99, "protein": 15.0}, {"name": "Grapefruit", "grams": 120.0, "cal": 40.0, "fat": 0.1, "sodium": 0.0, "carb": 9.0, "fiber": 1.4, "protein": 1.2}], "meal_cal": 330.0}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 20.0, "cal": 121.4, "fat": 11.43, "sodium": 28.6, "carb": 3.57, "fiber": 2.14, "protein": 4.29}], "meal_cal": 436.4}, {"meal": 4, "items": [{"name": "Applesauce - Cinnamon Unsweetened (365)", "grams": 113.0, "cal": 70.0, "fat": 0.0, "sodium": 20.0, "carb": 18.0, "fiber": 2.0, "protein": 0.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 100.0, "cal": 34.0, "fat": 0.19, "sodium": 16.0, "carb": 8.16, "fiber": 0.9, "protein": 0.84}, {"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 55.0, "cal": 51.8, "fat": 0.97, "sodium": 155.3, "carb": 0.0, "fiber": 0.0, "protein": 11.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 80.0, "cal": 16.7, "fat": 0.0, "sodium": 146.7, "carb": 3.34, "fiber": 0.66, "protein": 0.66}, {"name": "Watermelon", "grams": 130.0, "cal": 39.0, "fat": 0.2, "sodium": 1.3, "carb": 9.81, "fiber": 0.52, "protein": 0.79}], "meal_cal": 328.5}], "totals": {"cal": 1475.0, "fat": 36.1, "sodium": 1746.8, "carb": 220.3, "fiber": 32.4, "protein": 82.2}, "had_duplicates": false}, "2026-09-17": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}], "meal_cal": 296.5}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 140.0, "cal": 90.0, "fat": 0.0, "sodium": 0.0, "carb": 21.99, "fiber": 3.0, "protein": 0.99}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}], "meal_cal": 590.0}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 50.0, "cal": 17.0, "fat": 0.1, "sodium": 8.0, "carb": 4.08, "fiber": 0.45, "protein": 0.42}], "meal_cal": 406.9}, {"meal": 4, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 110.0, "cal": 99.0, "fat": 0.59, "sodium": 55.0, "carb": 16.08, "fiber": 5.08, "protein": 7.36}, {"name": "Tomatoes Slicing", "grams": 148.0, "cal": 25.0, "fat": 0.0, "sodium": 20.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}], "meal_cal": 184.0}], "totals": {"cal": 1477.4, "fat": 47.7, "sodium": 1610.7, "carb": 188.4, "fiber": 29.8, "protein": 91.8}, "had_duplicates": false}, "2026-09-18": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 14.0, "cal": 85.0, "fat": 8.0, "sodium": 20.0, "carb": 2.5, "fiber": 1.5, "protein": 3.0}, {"name": "Half & Half (GV)", "grams": 31.0, "cal": 40.1, "fat": 3.51, "sodium": 25.1, "carb": 1.0, "fiber": 0.0, "protein": 1.0}], "meal_cal": 355.1}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Applesauce - Orange Swirl (No sugar added)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Watermelon", "grams": 100.0, "cal": 30.0, "fat": 0.15, "sodium": 1.0, "carb": 7.55, "fiber": 0.4, "protein": 0.61}], "meal_cal": 430.0}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 140.0, "cal": 90.0, "fat": 0.0, "sodium": 0.0, "carb": 21.99, "fiber": 3.0, "protein": 0.99}, {"name": "Eggs (Vital Farms)", "grams": 50.0, "cal": 70.0, "fat": 5.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}], "meal_cal": 455.0}, {"meal": 4, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 107.0, "cal": 96.3, "fat": 0.58, "sodium": 53.5, "carb": 15.64, "fiber": 4.94, "protein": 7.16}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 43.0, "cal": 40.5, "fat": 0.76, "sodium": 121.4, "carb": 0.0, "fiber": 0.0, "protein": 8.6}, {"name": "Tomatoes Slicing", "grams": 124.0, "cal": 21.0, "fat": 0.0, "sodium": 16.7, "carb": 4.19, "fiber": 0.84, "protein": 0.84}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}], "meal_cal": 264.9}], "totals": {"cal": 1505.0, "fat": 51.8, "sodium": 1613.4, "carb": 195.6, "fiber": 31.9, "protein": 80.8}, "had_duplicates": false}, "2026-09-19": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Blueberries", "grams": 74.0, "cal": 42.0, "fat": 0.25, "sodium": 0.5, "carb": 10.5, "fiber": 2.0, "protein": 0.5}], "meal_cal": 390.0}, {"meal": 2, "items": [{"name": "Turkey Sausage Lasagna (Cafe Steamers)", "grams": 283.0, "cal": 290.0, "fat": 6.0, "sodium": 490.0, "carb": 42.99, "fiber": 3.99, "protein": 15.0}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 140.0, "cal": 90.0, "fat": 0.0, "sodium": 0.0, "carb": 21.99, "fiber": 3.0, "protein": 0.99}], "meal_cal": 460.0}, {"meal": 3, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Blueberries", "grams": 74.0, "cal": 42.0, "fat": 0.25, "sodium": 0.5, "carb": 10.5, "fiber": 2.0, "protein": 0.5}], "meal_cal": 402.0}, {"meal": 4, "items": [{"name": "Brussels Sprouts Frozen", "grams": 65.0, "cal": 26.8, "fat": 0.0, "sodium": 11.5, "carb": 5.36, "fiber": 2.29, "protein": 2.29}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 82.0, "cal": 65.3, "fat": 1.81, "sodium": 239.4, "carb": 3.62, "fiber": 0.0, "protein": 9.43}, {"name": "Cucumber", "grams": 115.0, "cal": 17.2, "fat": 0.0, "sodium": 2.3, "carb": 4.2, "fiber": 0.76, "protein": 0.76}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 170.0, "cal": 35.4, "fat": 0.0, "sodium": 311.7, "carb": 7.09, "fiber": 1.41, "protein": 1.41}], "meal_cal": 204.7}], "totals": {"cal": 1456.7, "fat": 33.8, "sodium": 1900.9, "carb": 217.3, "fiber": 30.5, "protein": 83.9}, "had_duplicates": false}, "2026-09-20": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}], "meal_cal": 349.4}, {"meal": 2, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Veggies - Flame Grilled Provencale", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Cracker - Shredded Wheat", "grams": 28.0, "cal": 120.0, "fat": 3.5, "sodium": 170.0, "carb": 20.0, "fiber": 3.0, "protein": 3.0}], "meal_cal": 545.0}, {"meal": 3, "items": [{"name": "Lemon Parmesan Chicken", "grams": 311.0, "cal": 300.0, "fat": 7.0, "sodium": 580.0, "carb": 38.0, "fiber": 5.01, "protein": 20.0}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 140.0, "cal": 90.0, "fat": 0.0, "sodium": 0.0, "carb": 21.99, "fiber": 3.0, "protein": 0.99}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}, {"name": "Butter (Kerrygold)", "grams": 7.0, "cal": 50.0, "fat": 6.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 470.0}, {"meal": 4, "items": [{"name": "Cucumber English", "grams": 91.0, "cal": 13.7, "fat": 0.09, "sodium": 1.8, "carb": 3.28, "fiber": 0.46, "protein": 0.64}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Tomatoes Slicing", "grams": 148.0, "cal": 25.0, "fat": 0.0, "sodium": 20.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Watermelon", "grams": 150.0, "cal": 45.0, "fat": 0.23, "sodium": 1.5, "carb": 11.32, "fiber": 0.6, "protein": 0.92}], "meal_cal": 151.7}], "totals": {"cal": 1516.1, "fat": 33.5, "sodium": 1875.5, "carb": 239.1, "fiber": 31.1, "protein": 73.5}, "had_duplicates": false}, "2026-09-21": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 74.0, "cal": 42.0, "fat": 0.25, "sodium": 0.5, "carb": 10.5, "fiber": 2.0, "protein": 0.5}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 14.0, "cal": 85.0, "fat": 8.0, "sodium": 20.0, "carb": 2.5, "fiber": 1.5, "protein": 3.0}], "meal_cal": 357.0}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 17.0, "cal": 103.0, "fat": 8.76, "sodium": 28.3, "carb": 3.61, "fiber": 1.55, "protein": 4.12}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}], "meal_cal": 372.9}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Sweet Potato", "grams": 70.0, "cal": 29.4, "fat": 0.36, "sodium": 4.2, "carb": 6.17, "fiber": 3.71, "protein": 1.74}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}], "meal_cal": 344.4}, {"meal": 4, "items": [{"name": "Focaccia Sandwich - Toasted Caprese", "grams": 270.0, "cal": 370.0, "fat": 12.99, "sodium": 740.0, "carb": 48.01, "fiber": 2.0, "protein": 15.01}, {"name": "Blueberries", "grams": 74.0, "cal": 42.0, "fat": 0.25, "sodium": 0.5, "carb": 10.5, "fiber": 2.0, "protein": 0.5}], "meal_cal": 412.0}], "totals": {"cal": 1486.3, "fat": 41.6, "sodium": 1988.5, "carb": 216.3, "fiber": 32.8, "protein": 78.4}, "had_duplicates": false}, "2026-09-22": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}], "meal_cal": 490.0}, {"meal": 2, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}], "meal_cal": 515.0}, {"meal": 3, "items": [{"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}], "meal_cal": 479.9}], "totals": {"cal": 1484.9, "fat": 48.5, "sodium": 1795.0, "carb": 192.0, "fiber": 30.0, "protein": 89.5}, "had_duplicates": false}, "2026-09-24": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}], "meal_cal": 484.0}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Olive Oil", "grams": 22.0, "cal": 187.9, "fat": 21.92, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 522.9}, {"meal": 3, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 75.0, "cal": 80.4, "fat": 1.34, "sodium": 361.6, "carb": 0.0, "fiber": 0.0, "protein": 17.41}, {"name": "Sweet Potato", "grams": 200.0, "cal": 84.0, "fat": 1.02, "sodium": 12.0, "carb": 17.64, "fiber": 10.6, "protein": 4.98}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Apple - Cosmic Crisp", "grams": 200.0, "cal": 142.9, "fat": 0.72, "sodium": 0.0, "carb": 34.28, "fiber": 8.58, "protein": 0.72}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}], "meal_cal": 462.2}], "totals": {"cal": 1469.1, "fat": 54.2, "sodium": 1764.7, "carb": 182.9, "fiber": 47.2, "protein": 82.8}, "had_duplicates": false}, "2026-09-25": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 43.0, "cal": 154.4, "fat": 2.76, "sodium": 209.5, "carb": 31.97, "fiber": 4.41, "protein": 5.51}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 28.0, "cal": 169.7, "fat": 14.43, "sodium": 46.7, "carb": 5.94, "fiber": 2.55, "protein": 6.79}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}], "meal_cal": 498.1}, {"meal": 2, "items": [{"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Sweet Potato", "grams": 100.0, "cal": 42.0, "fat": 0.51, "sodium": 6.0, "carb": 8.82, "fiber": 5.3, "protein": 2.49}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 250.0, "cal": 112.6, "fat": 0.0, "sodium": 0.0, "carb": 29.27, "fiber": 2.25, "protein": 0.0}], "meal_cal": 549.5}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}], "meal_cal": 444.6}], "totals": {"cal": 1492.2, "fat": 52.1, "sodium": 2148.2, "carb": 179.0, "fiber": 29.5, "protein": 93.8}, "had_duplicates": false}, "2026-09-26": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Half & Half (GV)", "grams": 15.0, "cal": 19.4, "fat": 1.7, "sodium": 12.1, "carb": 0.49, "fiber": 0.0, "protein": 0.49}], "meal_cal": 349.4}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 112.0, "cal": 120.0, "fat": 2.0, "sodium": 540.0, "carb": 0.0, "fiber": 0.0, "protein": 26.0}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Olive Oil", "grams": 7.0, "cal": 59.8, "fat": 6.97, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 50.0, "cal": 10.4, "fat": 0.0, "sodium": 91.7, "carb": 2.08, "fiber": 0.41, "protein": 0.41}, {"name": "Butter (Kerrygold)", "grams": 7.0, "cal": 50.0, "fat": 6.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 460.2}, {"meal": 3, "items": [{"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 17.0, "cal": 103.0, "fat": 8.76, "sodium": 28.3, "carb": 3.61, "fiber": 1.55, "protein": 4.12}], "meal_cal": 422.9}, {"meal": 4, "items": [{"name": "Cucumber English", "grams": 100.0, "cal": 15.0, "fat": 0.1, "sodium": 2.0, "carb": 3.6, "fiber": 0.5, "protein": 0.7}, {"name": "Lentils - Dry (Food to Live)", "grams": 100.0, "cal": 90.0, "fat": 0.54, "sodium": 50.0, "carb": 14.62, "fiber": 4.61, "protein": 6.69}, {"name": "Sweet Potato", "grams": 45.0, "cal": 18.9, "fat": 0.23, "sodium": 2.7, "carb": 3.97, "fiber": 2.38, "protein": 1.12}, {"name": "Tomatoes Slicing", "grams": 100.0, "cal": 16.9, "fat": 0.0, "sodium": 13.5, "carb": 3.38, "fiber": 0.68, "protein": 0.68}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}], "meal_cal": 221.8}], "totals": {"cal": 1454.3, "fat": 42.5, "sodium": 1782.0, "carb": 199.4, "fiber": 31.7, "protein": 86.2}, "had_duplicates": false}, "2026-09-27": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}], "meal_cal": 477.1}, {"meal": 2, "items": [{"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}, {"name": "Sweet Potato", "grams": 176.0, "cal": 73.9, "fat": 0.9, "sodium": 10.6, "carb": 15.52, "fiber": 9.33, "protein": 4.38}, {"name": "Olive Oil", "grams": 5.0, "cal": 42.7, "fat": 4.98, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 386.6}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 34.0, "cal": 125.3, "fat": 10.74, "sodium": 232.6, "carb": 0.0, "fiber": 0.0, "protein": 8.95}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 67.0, "cal": 30.2, "fat": 0.0, "sodium": 0.0, "carb": 7.85, "fiber": 0.6, "protein": 0.0}], "meal_cal": 456.5}, {"meal": 4, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 62.0, "cal": 55.8, "fat": 0.33, "sodium": 31.0, "carb": 9.06, "fiber": 2.86, "protein": 4.15}, {"name": "Tomatoes Slicing", "grams": 100.0, "cal": 16.9, "fat": 0.0, "sodium": 13.5, "carb": 3.38, "fiber": 0.68, "protein": 0.68}], "meal_cal": 132.7}], "totals": {"cal": 1452.9, "fat": 52.0, "sodium": 1865.0, "carb": 169.3, "fiber": 32.3, "protein": 94.2}, "had_duplicates": false}, "2026-09-28": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 42.0, "cal": 254.6, "fat": 21.64, "sodium": 70.0, "carb": 8.91, "fiber": 3.82, "protein": 10.18}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}], "meal_cal": 584.6}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Chicken - Chunk (Kirkland)", "grams": 112.0, "cal": 120.0, "fat": 2.0, "sodium": 540.0, "carb": 0.0, "fiber": 0.0, "protein": 26.0}, {"name": "Potatoes - Red", "grams": 220.0, "cal": 160.0, "fat": 0.0, "sodium": 0.0, "carb": 37.99, "fiber": 2.0, "protein": 4.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Olive Oil", "grams": 11.0, "cal": 94.0, "fat": 10.96, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 526.0}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 401.0}], "totals": {"cal": 1511.6, "fat": 54.5, "sodium": 1201.7, "carb": 201.6, "fiber": 32.4, "protein": 72.9}, "had_duplicates": false}, "2026-09-29": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 74.0, "cal": 42.0, "fat": 0.25, "sodium": 0.5, "carb": 10.5, "fiber": 2.0, "protein": 0.5}], "meal_cal": 272.0}, {"meal": 2, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Veggies - Flame Grilled Provencale", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}], "meal_cal": 545.0}, {"meal": 3, "items": [{"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 65.0, "cal": 58.5, "fat": 0.35, "sodium": 32.5, "carb": 9.5, "fiber": 3.0, "protein": 4.35}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}], "meal_cal": 553.1}, {"meal": 4, "items": [{"name": "Apple - Cosmic Crisp", "grams": 100.0, "cal": 71.4, "fat": 0.36, "sodium": 0.0, "carb": 17.14, "fiber": 4.29, "protein": 0.36}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Onion - Green Raw", "grams": 15.0, "cal": 4.8, "fat": 0.0, "sodium": 2.4, "carb": 1.1, "fiber": 0.4, "protein": 0.3}, {"name": "Orange Navel - Peeled", "grams": 30.0, "cal": 14.7, "fat": 0.04, "sodium": 0.3, "carb": 3.77, "fiber": 0.65, "protein": 0.27}, {"name": "Tomatoes Slicing", "grams": 100.0, "cal": 16.9, "fat": 0.0, "sodium": 13.5, "carb": 3.38, "fiber": 0.68, "protein": 0.68}], "meal_cal": 167.8}], "totals": {"cal": 1537.9, "fat": 52.4, "sodium": 2134.2, "carb": 190.4, "fiber": 30.0, "protein": 89.4}, "had_duplicates": false}, "2026-09-30": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}], "meal_cal": 314.0}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 100.0, "cal": 90.0, "fat": 0.54, "sodium": 50.0, "carb": 14.62, "fiber": 4.61, "protein": 6.69}, {"name": "Potatoes - Red", "grams": 150.0, "cal": 109.1, "fat": 0.0, "sodium": 0.0, "carb": 25.9, "fiber": 1.36, "protein": 2.73}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 334.1}, {"meal": 3, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 100.0, "cal": 90.0, "fat": 0.54, "sodium": 50.0, "carb": 14.62, "fiber": 4.61, "protein": 6.69}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 21.0, "cal": 127.5, "fat": 12.0, "sodium": 30.0, "carb": 3.75, "fiber": 2.25, "protein": 4.5}], "meal_cal": 317.5}, {"meal": 4, "items": [{"name": "Bruegger's Leonardo Da Veggie Sandwich", "grams": 295.0, "cal": 520.1, "fat": 15.99, "sodium": 870.0, "carb": 66.99, "fiber": 3.01, "protein": 25.99}], "meal_cal": 520.1}], "totals": {"cal": 1485.7, "fat": 44.6, "sodium": 1336.0, "carb": 219.9, "fiber": 32.9, "protein": 65.1}, "had_duplicates": false}, "2026-10-03": {"meals": [{"meal": 1, "items": [{"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 14.0, "cal": 85.0, "fat": 8.0, "sodium": 20.0, "carb": 2.5, "fiber": 1.5, "protein": 3.0}], "meal_cal": 399.0}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Olive Oil", "grams": 7.0, "cal": 59.8, "fat": 6.97, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 541.8}, {"meal": 3, "items": [{"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Potatoes - Little Red", "grams": 252.0, "cal": 160.4, "fat": 0.0, "sodium": 0.0, "carb": 29.79, "fiber": 4.59, "protein": 4.59}], "meal_cal": 520.3}], "totals": {"cal": 1461.1, "fat": 38.2, "sodium": 1876.0, "carb": 200.3, "fiber": 34.1, "protein": 84.8}, "had_duplicates": false}, "2026-10-04": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}], "meal_cal": 447.1}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 112.0, "cal": 120.0, "fat": 2.0, "sodium": 540.0, "carb": 0.0, "fiber": 0.0, "protein": 26.0}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Brussels Sprouts Frozen", "grams": 100.0, "cal": 41.2, "fat": 0.0, "sodium": 17.6, "carb": 8.24, "fiber": 3.53, "protein": 3.53}, {"name": "Butter (Kerrygold)", "grams": 7.0, "cal": 50.0, "fat": 6.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Pesto (Rao's)", "grams": 10.0, "cal": 50.8, "fat": 4.92, "sodium": 155.6, "carb": 0.95, "fiber": 0.48, "protein": 0.64}], "meal_cal": 527.0}, {"meal": 3, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 20.0, "cal": 121.2, "fat": 10.3, "sodium": 33.3, "carb": 4.24, "fiber": 1.82, "protein": 4.85}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Apple - Cosmic Crisp", "grams": 150.0, "cal": 107.1, "fat": 0.54, "sodium": 0.0, "carb": 25.71, "fiber": 6.44, "protein": 0.54}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 200.0, "cal": 68.0, "fat": 0.38, "sodium": 32.0, "carb": 16.32, "fiber": 1.8, "protein": 1.68}], "meal_cal": 496.3}], "totals": {"cal": 1470.4, "fat": 55.9, "sodium": 1739.1, "carb": 189.2, "fiber": 33.3, "protein": 73.8}, "had_duplicates": false}, "2026-10-07": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}], "meal_cal": 514.0}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 84.0, "cal": 90.0, "fat": 1.5, "sodium": 405.0, "carb": 0.0, "fiber": 0.0, "protein": 19.5}, {"name": "Potatoes - Little Red", "grams": 220.0, "cal": 140.0, "fat": 0.0, "sodium": 0.0, "carb": 26.0, "fiber": 4.0, "protein": 4.0}, {"name": "Brussels Sprouts Frozen", "grams": 170.0, "cal": 70.0, "fat": 0.0, "sodium": 30.0, "carb": 14.01, "fiber": 6.0, "protein": 6.0}, {"name": "Tomato Paste - Organic (Kirkland)", "grams": 33.0, "cal": 30.0, "fat": 0.0, "sodium": 20.0, "carb": 6.0, "fiber": 2.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 7.0, "cal": 59.8, "fat": 6.97, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Butter (Kerrygold)", "grams": 9.0, "cal": 64.3, "fat": 7.71, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 454.1}, {"meal": 3, "items": [{"name": "Kevin's Orange Chicken Bowl", "grams": 269.0, "cal": 270.0, "fat": 3.01, "sodium": 570.0, "carb": 41.0, "fiber": 4.01, "protein": 19.99}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}], "meal_cal": 502.0}], "totals": {"cal": 1470.1, "fat": 48.4, "sodium": 1806.0, "carb": 181.0, "fiber": 35.0, "protein": 88.2}, "had_duplicates": false}, "2026-10-08": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 147.0, "cal": 50.0, "fat": 0.28, "sodium": 23.5, "carb": 12.0, "fiber": 1.32, "protein": 1.23}, {"name": "Blueberries", "grams": 100.0, "cal": 56.8, "fat": 0.34, "sodium": 0.7, "carb": 14.19, "fiber": 2.7, "protein": 0.68}], "meal_cal": 336.8}, {"meal": 2, "items": [{"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}, {"name": "Potatoes - Red", "grams": 110.0, "cal": 80.0, "fat": 0.0, "sodium": 0.0, "carb": 19.0, "fiber": 1.0, "protein": 2.0}, {"name": "Butter (Kerrygold)", "grams": 10.0, "cal": 71.4, "fat": 8.57, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Tomato Paste - Organic (Kirkland)", "grams": 45.0, "cal": 40.9, "fat": 0.0, "sodium": 27.3, "carb": 8.18, "fiber": 2.73, "protein": 1.36}], "meal_cal": 462.3}, {"meal": 3, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Cucumber English", "grams": 50.0, "cal": 7.5, "fat": 0.05, "sodium": 1.0, "carb": 1.8, "fiber": 0.25, "protein": 0.35}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}], "meal_cal": 694.5}], "totals": {"cal": 1493.6, "fat": 46.4, "sodium": 1922.5, "carb": 200.2, "fiber": 33.0, "protein": 82.3}, "had_duplicates": false}, "2026-10-09": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 200.0, "cal": 68.0, "fat": 0.38, "sodium": 32.0, "carb": 16.32, "fiber": 1.8, "protein": 1.68}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}], "meal_cal": 426.1}, {"meal": 2, "items": [{"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}, {"name": "Brussels Sprouts Frozen", "grams": 150.0, "cal": 61.8, "fat": 0.0, "sodium": 26.5, "carb": 12.36, "fiber": 5.29, "protein": 5.29}, {"name": "Tomato Paste - Organic (Kirkland)", "grams": 33.0, "cal": 30.0, "fat": 0.0, "sodium": 20.0, "carb": 6.0, "fiber": 2.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 21.0, "cal": 179.4, "fat": 20.92, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 541.2}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}], "meal_cal": 525.0}], "totals": {"cal": 1492.3, "fat": 55.8, "sodium": 1675.8, "carb": 188.2, "fiber": 31.9, "protein": 77.0}, "had_duplicates": false}, "2026-10-10": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 17.0, "cal": 103.0, "fat": 8.76, "sodium": 28.3, "carb": 3.61, "fiber": 1.55, "protein": 4.12}], "meal_cal": 460.1}, {"meal": 2, "items": [{"name": "Chicken Marinara w/ Parmesan (Cafe Steamers)", "grams": 269.0, "cal": 280.0, "fat": 6.0, "sodium": 550.0, "carb": 35.99, "fiber": 4.01, "protein": 19.99}, {"name": "Tomato Paste - Organic (Kirkland)", "grams": 30.0, "cal": 27.3, "fat": 0.0, "sodium": 18.2, "carb": 5.45, "fiber": 1.82, "protein": 0.91}, {"name": "Lentils - Dry (Food to Live)", "grams": 127.0, "cal": 114.3, "fat": 0.68, "sodium": 63.5, "carb": 18.56, "fiber": 5.86, "protein": 8.5}, {"name": "Olive Oil", "grams": 7.0, "cal": 59.8, "fat": 6.97, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 531.4}, {"meal": 3, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 100.0, "cal": 107.1, "fat": 1.79, "sodium": 482.1, "carb": 0.0, "fiber": 0.0, "protein": 23.21}, {"name": "Potatoes - Little Red", "grams": 100.0, "cal": 63.6, "fat": 0.0, "sodium": 0.0, "carb": 11.82, "fiber": 1.82, "protein": 1.82}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 21.0, "cal": 127.5, "fat": 12.0, "sodium": 30.0, "carb": 3.75, "fiber": 2.25, "protein": 4.5}, {"name": "Apple - Cosmic Crisp", "grams": 115.0, "cal": 82.1, "fat": 0.41, "sodium": 0.0, "carb": 19.71, "fiber": 4.93, "protein": 0.41}], "meal_cal": 505.3}], "totals": {"cal": 1496.8, "fat": 51.9, "sodium": 1782.7, "carb": 185.7, "fiber": 33.5, "protein": 84.0}, "had_duplicates": false}, "2026-10-11": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 130.0, "cal": 92.9, "fat": 0.47, "sodium": 0.0, "carb": 22.28, "fiber": 5.58, "protein": 0.47}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}], "meal_cal": 438.0}, {"meal": 2, "items": [{"name": "Kevin's Orange Chicken Bowl", "grams": 269.0, "cal": 270.0, "fat": 3.01, "sodium": 570.0, "carb": 41.0, "fiber": 4.01, "protein": 19.99}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 200.0, "cal": 68.0, "fat": 0.38, "sodium": 32.0, "carb": 16.32, "fiber": 1.8, "protein": 1.68}, {"name": "Applesauce (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 537.6}, {"meal": 3, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 52.0, "cal": 55.7, "fat": 0.93, "sodium": 250.7, "carb": 0.0, "fiber": 0.0, "protein": 12.07}, {"name": "Potatoes - Little Red", "grams": 110.0, "cal": 70.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 2.0, "protein": 2.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 33.0, "cal": 200.0, "fat": 17.0, "sodium": 55.0, "carb": 7.0, "fiber": 3.0, "protein": 8.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}], "meal_cal": 525.6}], "totals": {"cal": 1501.2, "fat": 45.5, "sodium": 1808.5, "carb": 200.4, "fiber": 30.6, "protein": 84.8}, "had_duplicates": false}, "2026-10-12": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Egg - Hard-Boiled Organic", "grams": 44.0, "cal": 68.0, "fat": 4.0, "sodium": 60.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 100.0, "cal": 64.3, "fat": 0.0, "sodium": 0.0, "carb": 15.71, "fiber": 2.14, "protein": 0.71}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 14.0, "cal": 85.0, "fat": 8.0, "sodium": 20.0, "carb": 2.5, "fiber": 1.5, "protein": 3.0}], "meal_cal": 494.4}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 80.0, "cal": 72.0, "fat": 0.43, "sodium": 40.0, "carb": 11.69, "fiber": 3.69, "protein": 5.35}, {"name": "Potatoes - Little Red", "grams": 220.0, "cal": 140.0, "fat": 0.0, "sodium": 0.0, "carb": 26.0, "fiber": 4.0, "protein": 4.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Pineapple, raw", "grams": 241.0, "cal": 130.3, "fat": 0.51, "sodium": 0.0, "carb": 33.96, "fiber": 2.24, "protein": 1.11}], "meal_cal": 502.3}, {"meal": 3, "items": [{"name": "Chicken - Rotisserie (Oscar Mayer)", "grams": 56.0, "cal": 50.0, "fat": 1.0, "sodium": 540.0, "carb": 2.0, "fiber": 0.0, "protein": 9.0}, {"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Lentils - Organic Canned (GV)", "grams": 50.0, "cal": 42.3, "fat": 0.0, "sodium": 44.2, "carb": 8.1, "fiber": 1.15, "protein": 2.7}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 487.2}], "totals": {"cal": 1483.9, "fat": 47.7, "sodium": 1974.8, "carb": 193.7, "fiber": 29.0, "protein": 83.4}, "had_duplicates": false}, "2026-10-13": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Orange Navel - Peeled", "grams": 138.0, "cal": 67.8, "fat": 0.21, "sodium": 1.4, "carb": 17.32, "fiber": 3.01, "protein": 1.26}, {"name": "Pineapple, raw", "grams": 180.0, "cal": 97.3, "fat": 0.38, "sodium": 0.0, "carb": 25.36, "fiber": 1.67, "protein": 0.83}], "meal_cal": 442.2}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 200.0, "cal": 180.0, "fat": 1.08, "sodium": 100.0, "carb": 29.23, "fiber": 9.23, "protein": 13.38}, {"name": "Potatoes - Little Red", "grams": 330.0, "cal": 210.0, "fat": 0.0, "sodium": 0.0, "carb": 39.01, "fiber": 6.01, "protein": 6.01}, {"name": "Veggies - Flame Grilled Provencale", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 12.0, "cal": 102.5, "fat": 11.96, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 597.5}, {"meal": 3, "items": [{"name": "Kevin's Chicken Bowl - Basil Parmesan", "grams": 255.0, "cal": 270.0, "fat": 10.0, "sodium": 740.0, "carb": 10.0, "fiber": 2.0, "protein": 33.99}, {"name": "Grapefruit", "grams": 120.0, "cal": 40.0, "fat": 0.1, "sodium": 0.0, "carb": 9.0, "fiber": 1.4, "protein": 1.2}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 95.0, "cal": 50.3, "fat": 2.79, "sodium": 234.7, "carb": 5.59, "fiber": 2.23, "protein": 1.12}, {"name": "Butter (Kerrygold)", "grams": 12.0, "cal": 85.7, "fat": 10.29, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 496.0}], "totals": {"cal": 1535.7, "fat": 43.1, "sodium": 1886.7, "carb": 207.3, "fiber": 33.8, "protein": 86.3}, "had_duplicates": false}, "2026-10-14": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Blueberries", "grams": 83.0, "cal": 47.1, "fat": 0.28, "sodium": 0.6, "carb": 11.78, "fiber": 2.24, "protein": 0.56}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 160.0, "cal": 114.3, "fat": 0.58, "sodium": 0.0, "carb": 27.42, "fiber": 6.86, "protein": 0.58}, {"name": "Egg - Hard-Boiled Organic", "grams": 88.0, "cal": 136.0, "fat": 8.0, "sodium": 120.0, "carb": 0.0, "fiber": 0.0, "protein": 12.0}], "meal_cal": 527.4}, {"meal": 2, "items": [{"name": "Kevin's Orange Chicken Bowl", "grams": 269.0, "cal": 270.0, "fat": 3.01, "sodium": 570.0, "carb": 41.0, "fiber": 4.01, "protein": 19.99}, {"name": "Potatoes - Little Red", "grams": 220.0, "cal": 140.0, "fat": 0.0, "sodium": 0.0, "carb": 26.0, "fiber": 4.0, "protein": 4.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Olive Oil", "grams": 5.0, "cal": 42.7, "fat": 4.98, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Applesauce - Orange Swirl (No sugar added)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 537.7}, {"meal": 3, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Butter (Kerrygold)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Eggs (Vital Farms)", "grams": 50.0, "cal": 70.0, "fat": 5.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}, {"name": "Applesauce - Orange Swirl (No sugar added)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 441.0}], "totals": {"cal": 1506.1, "fat": 38.1, "sodium": 1437.3, "carb": 216.9, "fiber": 32.7, "protein": 79.6}, "had_duplicates": false}, "2026-10-15": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 180.0, "cal": 68.7, "fat": 0.0, "sodium": 99.1, "carb": 9.92, "fiber": 0.0, "protein": 6.86}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}, {"name": "Egg - Hard-Boiled Organic", "grams": 88.0, "cal": 136.0, "fat": 8.0, "sodium": 120.0, "carb": 0.0, "fiber": 0.0, "protein": 12.0}], "meal_cal": 478.7}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 56.0, "cal": 60.0, "fat": 1.0, "sodium": 270.0, "carb": 0.0, "fiber": 0.0, "protein": 13.0}, {"name": "Potatoes - Little Red", "grams": 110.0, "cal": 70.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 2.0, "protein": 2.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Onion White", "grams": 20.0, "cal": 8.0, "fat": 0.0, "sodium": 1.0, "carb": 2.0, "fiber": 0.02, "protein": 0.02}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 14.0, "cal": 85.0, "fat": 8.0, "sodium": 20.0, "carb": 2.5, "fiber": 1.5, "protein": 3.0}, {"name": "Apple - Cosmic Crisp", "grams": 94.0, "cal": 67.1, "fat": 0.34, "sodium": 0.0, "carb": 16.11, "fiber": 4.03, "protein": 0.34}], "meal_cal": 534.7}, {"meal": 3, "items": [{"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Cucumber English", "grams": 100.0, "cal": 15.0, "fat": 0.1, "sodium": 2.0, "carb": 3.6, "fiber": 0.5, "protein": 0.7}, {"name": "Tomatoes Slicing", "grams": 212.0, "cal": 35.8, "fat": 0.0, "sodium": 28.6, "carb": 7.17, "fiber": 1.43, "protein": 1.43}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Onion - Green Raw", "grams": 15.0, "cal": 4.8, "fat": 0.0, "sodium": 2.4, "carb": 1.1, "fiber": 0.4, "protein": 0.3}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Grapefruit", "grams": 120.0, "cal": 40.0, "fat": 0.1, "sodium": 0.0, "carb": 9.0, "fiber": 1.4, "protein": 1.2}], "meal_cal": 525.1}], "totals": {"cal": 1538.5, "fat": 57.9, "sodium": 1534.1, "carb": 194.4, "fiber": 29.3, "protein": 70.9}, "had_duplicates": false}, "2026-10-16": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 148.0, "cal": 84.0, "fat": 0.5, "sodium": 1.0, "carb": 21.0, "fiber": 4.0, "protein": 1.01}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}], "meal_cal": 484.0}, {"meal": 2, "items": [{"name": "Chicken Marinara w/ Parmesan (Cafe Steamers)", "grams": 269.0, "cal": 280.0, "fat": 6.0, "sodium": 550.0, "carb": 35.99, "fiber": 4.01, "protein": 19.99}, {"name": "Lentils - Dry (Food to Live)", "grams": 160.0, "cal": 144.0, "fat": 0.86, "sodium": 80.0, "carb": 23.38, "fiber": 7.38, "protein": 10.71}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 7.0, "cal": 59.8, "fat": 6.97, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 528.8}, {"meal": 3, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 112.0, "cal": 120.0, "fat": 2.0, "sodium": 540.0, "carb": 0.0, "fiber": 0.0, "protein": 26.0}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 110.0, "cal": 193.6, "fat": 3.52, "sodium": 167.2, "carb": 36.96, "fiber": 3.52, "protein": 4.4}, {"name": "Potatoes - Little Red", "grams": 178.0, "cal": 113.3, "fat": 0.0, "sodium": 0.0, "carb": 21.04, "fiber": 3.24, "protein": 3.24}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 32.0, "cal": 12.3, "fat": 0.0, "sodium": 24.7, "carb": 2.87, "fiber": 0.82, "protein": 0.41}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 489.2}], "totals": {"cal": 1502.0, "fat": 40.8, "sodium": 1932.9, "carb": 206.2, "fiber": 33.0, "protein": 86.8}, "had_duplicates": false}, "2026-10-17": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 50.0, "cal": 179.5, "fat": 3.21, "sodium": 243.6, "carb": 37.18, "fiber": 5.13, "protein": 6.41}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 100.0, "cal": 56.8, "fat": 0.34, "sodium": 0.7, "carb": 14.19, "fiber": 2.7, "protein": 0.68}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 20.0, "cal": 121.4, "fat": 11.43, "sodium": 28.6, "carb": 3.57, "fiber": 2.14, "protein": 4.29}, {"name": "Half & Half (GV)", "grams": 31.0, "cal": 40.1, "fat": 3.51, "sodium": 25.1, "carb": 1.0, "fiber": 0.0, "protein": 1.0}], "meal_cal": 487.8}, {"meal": 2, "items": [{"name": "Chicken Marinara w/ Parmesan (Cafe Steamers)", "grams": 269.0, "cal": 280.0, "fat": 6.0, "sodium": 550.0, "carb": 35.99, "fiber": 4.01, "protein": 19.99}, {"name": "Potatoes - Little Red", "grams": 150.0, "cal": 95.5, "fat": 0.0, "sodium": 0.0, "carb": 17.73, "fiber": 2.73, "protein": 2.73}, {"name": "Veggies - Flame Grilled Provencale", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}], "meal_cal": 420.5}, {"meal": 3, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 117.0, "cal": 105.3, "fat": 0.63, "sodium": 58.5, "carb": 17.1, "fiber": 5.4, "protein": 7.83}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Orange Navel - Peeled", "grams": 130.0, "cal": 63.8, "fat": 0.2, "sodium": 1.3, "carb": 16.32, "fiber": 2.83, "protein": 1.18}, {"name": "Olive Oil", "grams": 17.0, "cal": 145.2, "fat": 16.94, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 170.0, "cal": 57.8, "fat": 0.32, "sodium": 27.2, "carb": 13.87, "fiber": 1.53, "protein": 1.43}], "meal_cal": 592.1}], "totals": {"cal": 1500.4, "fat": 49.1, "sodium": 1475.0, "carb": 216.9, "fiber": 31.5, "protein": 60.5}, "had_duplicates": false}, "2026-10-18": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 100.0, "cal": 56.8, "fat": 0.34, "sodium": 0.7, "carb": 14.19, "fiber": 2.7, "protein": 0.68}, {"name": "Eggs (Vital Farms)", "grams": 50.0, "cal": 70.0, "fat": 5.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 6.0}, {"name": "Half & Half (GV)", "grams": 31.0, "cal": 40.1, "fat": 3.51, "sodium": 25.1, "carb": 1.0, "fiber": 0.0, "protein": 1.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Butter (Kerrygold)", "grams": 7.0, "cal": 50.0, "fat": 6.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 526.9}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 72.0, "cal": 77.1, "fat": 1.29, "sodium": 347.1, "carb": 0.0, "fiber": 0.0, "protein": 16.71}, {"name": "Lentils - Dry (Food to Live)", "grams": 150.0, "cal": 135.0, "fat": 0.81, "sodium": 75.0, "carb": 21.92, "fiber": 6.92, "protein": 10.04}, {"name": "Potatoes - Little Red", "grams": 110.0, "cal": 70.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 2.0, "protein": 2.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 10.0, "cal": 85.4, "fat": 9.96, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Apple - Cosmic Crisp", "grams": 94.0, "cal": 67.1, "fat": 0.34, "sodium": 0.0, "carb": 16.11, "fiber": 4.03, "protein": 0.34}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 150.0, "cal": 51.0, "fat": 0.28, "sodium": 24.0, "carb": 12.24, "fiber": 1.35, "protein": 1.26}], "meal_cal": 530.6}, {"meal": 3, "items": [{"name": "Chicken Margherita Balsamic (Cafe Steamers)", "grams": 269.0, "cal": 270.0, "fat": 6.0, "sodium": 360.0, "carb": 35.99, "fiber": 5.0, "protein": 17.0}, {"name": "Olive Oil", "grams": 10.0, "cal": 85.4, "fat": 9.96, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}], "meal_cal": 425.4}], "totals": {"cal": 1482.9, "fat": 55.0, "sodium": 1631.9, "carb": 176.4, "fiber": 31.0, "protein": 80.0}, "had_duplicates": false}, "2026-10-19": {"meals": [{"meal": 1, "items": [{"name": "Blueberries", "grams": 100.0, "cal": 56.8, "fat": 0.34, "sodium": 0.7, "carb": 14.19, "fiber": 2.7, "protein": 0.68}, {"name": "Cantaloupe Chunks (Marketside)", "grams": 148.0, "cal": 50.3, "fat": 0.28, "sodium": 23.7, "carb": 12.08, "fiber": 1.33, "protein": 1.24}, {"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 28.0, "cal": 170.0, "fat": 16.0, "sodium": 40.0, "carb": 5.0, "fiber": 3.0, "protein": 6.0}], "meal_cal": 507.1}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 150.0, "cal": 135.0, "fat": 0.81, "sodium": 75.0, "carb": 21.92, "fiber": 6.92, "protein": 10.04}, {"name": "Cucumber English", "grams": 100.0, "cal": 15.0, "fat": 0.1, "sodium": 2.0, "carb": 3.6, "fiber": 0.5, "protein": 0.7}, {"name": "Onion White", "grams": 40.0, "cal": 16.0, "fat": 0.0, "sodium": 2.0, "carb": 4.0, "fiber": 0.04, "protein": 0.04}, {"name": "Tomatoes Slicing", "grams": 200.0, "cal": 33.8, "fat": 0.0, "sodium": 27.0, "carb": 6.76, "fiber": 1.35, "protein": 1.35}, {"name": "Chicken - Chunk (Kirkland)", "grams": 130.0, "cal": 139.3, "fat": 2.33, "sodium": 626.8, "carb": 0.0, "fiber": 0.0, "protein": 30.17}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}], "meal_cal": 538.7}, {"meal": 3, "items": [{"name": "Chicken Margherita Balsamic (Cafe Steamers)", "grams": 269.0, "cal": 270.0, "fat": 6.0, "sodium": 360.0, "carb": 35.99, "fiber": 5.0, "protein": 17.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}], "meal_cal": 465.0}], "totals": {"cal": 1510.8, "fat": 51.8, "sodium": 1957.2, "carb": 180.5, "fiber": 32.8, "protein": 97.2}, "had_duplicates": false}, "2026-10-21": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Blueberries", "grams": 120.0, "cal": 68.1, "fat": 0.41, "sodium": 0.8, "carb": 17.03, "fiber": 3.24, "protein": 0.82}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 20.0, "cal": 121.4, "fat": 11.43, "sodium": 28.6, "carb": 3.57, "fiber": 2.14, "protein": 4.29}], "meal_cal": 419.5}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 130.0, "cal": 139.3, "fat": 2.33, "sodium": 626.8, "carb": 0.0, "fiber": 0.0, "protein": 30.17}, {"name": "Lentils - Dry (Food to Live)", "grams": 150.0, "cal": 135.0, "fat": 0.81, "sodium": 75.0, "carb": 21.92, "fiber": 6.92, "protein": 10.04}, {"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Veggies - Fire Roasted Melange", "grams": 85.0, "cal": 45.0, "fat": 2.5, "sodium": 210.0, "carb": 5.0, "fiber": 2.0, "protein": 1.0}, {"name": "Olive Oil", "grams": 7.0, "cal": 59.8, "fat": 6.97, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 539.1}, {"meal": 3, "items": [{"name": "Potatoes - Little Red", "grams": 200.0, "cal": 127.3, "fat": 0.0, "sodium": 0.0, "carb": 23.64, "fiber": 3.64, "protein": 3.64}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Olive Oil", "grams": 13.0, "cal": 111.0, "fat": 12.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Butter (Kerrygold)", "grams": 10.0, "cal": 71.4, "fat": 8.57, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 250.0, "cal": 112.6, "fat": 0.0, "sodium": 0.0, "carb": 29.27, "fiber": 2.25, "protein": 0.0}, {"name": "Grapefruit", "grams": 120.0, "cal": 40.0, "fat": 0.1, "sodium": 0.0, "carb": 9.0, "fiber": 1.4, "protein": 1.2}], "meal_cal": 542.3}], "totals": {"cal": 1500.9, "fat": 51.1, "sodium": 1641.2, "carb": 181.4, "fiber": 31.6, "protein": 92.2}, "had_duplicates": false}, "2026-10-22": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 25.0, "cal": 151.5, "fat": 12.88, "sodium": 41.7, "carb": 5.3, "fiber": 2.27, "protein": 6.06}], "meal_cal": 461.5}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 80.0, "cal": 85.7, "fat": 1.43, "sodium": 385.7, "carb": 0.0, "fiber": 0.0, "protein": 18.57}, {"name": "Mayonnaise - Real (Duke's)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Cheese - Colby-Jack Sliced (Sargento)", "grams": 19.0, "cal": 70.0, "fat": 6.0, "sodium": 130.0, "carb": 0.0, "fiber": 0.0, "protein": 5.0}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 140.0, "cal": 90.0, "fat": 0.0, "sodium": 0.0, "carb": 21.99, "fiber": 3.0, "protein": 0.99}], "meal_cal": 525.7}, {"meal": 3, "items": [{"name": "Chicken Margherita Balsamic (Cafe Steamers)", "grams": 269.0, "cal": 270.0, "fat": 6.0, "sodium": 360.0, "carb": 35.99, "fiber": 5.0, "protein": 17.0}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}], "meal_cal": 490.0}], "totals": {"cal": 1477.2, "fat": 46.3, "sodium": 1637.4, "carb": 201.3, "fiber": 30.3, "protein": 77.1}, "had_duplicates": false}, "2026-10-23": {"meals": [{"meal": 1, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 20.0, "cal": 121.2, "fat": 10.3, "sodium": 33.3, "carb": 4.24, "fiber": 1.82, "protein": 4.85}, {"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 95.0, "cal": 67.9, "fat": 0.34, "sodium": 0.0, "carb": 16.28, "fiber": 4.08, "protein": 0.34}, {"name": "Almonds - Lightly Salted (Blue Diamond)", "grams": 10.0, "cal": 60.7, "fat": 5.71, "sodium": 14.3, "carb": 1.79, "fiber": 1.07, "protein": 2.14}], "meal_cal": 559.8}, {"meal": 2, "items": [{"name": "Chicken Margherita Balsamic (Cafe Steamers)", "grams": 269.0, "cal": 270.0, "fat": 6.0, "sodium": 360.0, "carb": 35.99, "fiber": 5.0, "protein": 17.0}, {"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Cracker - Shredded Wheat", "grams": 28.0, "cal": 120.0, "fat": 3.5, "sodium": 160.0, "carb": 20.0, "fiber": 3.0, "protein": 3.0}], "meal_cal": 479.9}, {"meal": 3, "items": [{"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 454.6}], "totals": {"cal": 1494.3, "fat": 50.8, "sodium": 1732.6, "carb": 189.3, "fiber": 29.0, "protein": 84.3}, "had_duplicates": false}, "2026-10-24": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 148.0, "cal": 105.7, "fat": 0.53, "sodium": 0.0, "carb": 25.37, "fiber": 6.35, "protein": 0.53}], "meal_cal": 335.7}, {"meal": 2, "items": [{"name": "Chicken - Chunk (Kirkland)", "grams": 65.0, "cal": 69.6, "fat": 1.16, "sodium": 313.4, "carb": 0.0, "fiber": 0.0, "protein": 15.09}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Brussels Sprouts Frozen", "grams": 85.0, "cal": 35.0, "fat": 0.0, "sodium": 15.0, "carb": 7.0, "fiber": 3.0, "protein": 3.0}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 164.0, "cal": 105.4, "fat": 0.0, "sodium": 0.0, "carb": 25.76, "fiber": 3.51, "protein": 1.16}], "meal_cal": 549.6}, {"meal": 3, "items": [{"name": "Kevin's Orange Chicken Bowl", "grams": 269.0, "cal": 270.0, "fat": 3.01, "sodium": 570.0, "carb": 41.0, "fiber": 4.01, "protein": 19.99}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Potatoes - Little Red", "grams": 110.0, "cal": 70.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 2.0, "protein": 2.0}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Peanuts - Lightly Salted", "grams": 28.0, "cal": 159.9, "fat": 14.0, "sodium": 85.1, "carb": 6.0, "fiber": 1.99, "protein": 6.0}], "meal_cal": 604.9}], "totals": {"cal": 1490.2, "fat": 40.6, "sodium": 1953.5, "carb": 207.1, "fiber": 29.9, "protein": 84.8}, "had_duplicates": false}, "2026-10-25": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Orange Navel - Peeled", "grams": 123.0, "cal": 60.4, "fat": 0.18, "sodium": 1.3, "carb": 15.44, "fiber": 2.68, "protein": 1.12}, {"name": "Eggs (Vital Farms)", "grams": 100.0, "cal": 140.0, "fat": 10.0, "sodium": 140.0, "carb": 0.0, "fiber": 0.0, "protein": 12.0}, {"name": "Apple - Cosmic Crisp", "grams": 95.0, "cal": 67.9, "fat": 0.34, "sodium": 0.0, "carb": 16.28, "fiber": 4.08, "protein": 0.34}], "meal_cal": 498.3}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 130.0, "cal": 117.0, "fat": 0.7, "sodium": 65.0, "carb": 19.0, "fiber": 6.0, "protein": 8.7}, {"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 65.0, "cal": 69.6, "fat": 1.16, "sodium": 313.4, "carb": 0.0, "fiber": 0.0, "protein": 15.09}, {"name": "Brussels Sprouts Frozen", "grams": 120.0, "cal": 49.4, "fat": 0.0, "sodium": 21.2, "carb": 9.89, "fiber": 4.24, "protein": 4.24}, {"name": "Olive Oil", "grams": 7.0, "cal": 59.8, "fat": 6.97, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 540.8}, {"meal": 3, "items": [{"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Potatoes - Little Red", "grams": 110.0, "cal": 70.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 2.0, "protein": 2.0}, {"name": "Squash, winter, butternut, raw", "grams": 200.0, "cal": 83.4, "fat": 0.34, "sodium": 0.0, "carb": 21.0, "fiber": 3.92, "protein": 2.3}, {"name": "Olive Oil", "grams": 14.0, "cal": 119.6, "fat": 13.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Peanuts - Lightly Salted", "grams": 14.0, "cal": 79.9, "fat": 7.0, "sodium": 42.6, "carb": 3.0, "fiber": 0.99, "protein": 3.0}, {"name": "Lemon Juice", "grams": 5.0, "cal": 0.0, "fat": 0.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 432.9}], "totals": {"cal": 1472.0, "fat": 48.6, "sodium": 1553.5, "carb": 186.6, "fiber": 32.9, "protein": 85.8}, "had_duplicates": false}, "2026-10-26": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Apple - Cosmic Crisp", "grams": 140.0, "cal": 100.0, "fat": 0.5, "sodium": 0.0, "carb": 24.0, "fiber": 6.01, "protein": 0.5}, {"name": "Peanuts - Lightly Salted", "grams": 28.0, "cal": 159.9, "fat": 14.0, "sodium": 85.1, "carb": 6.0, "fiber": 1.99, "protein": 6.0}], "meal_cal": 489.9}, {"meal": 2, "items": [{"name": "Bread - Ezekiel 4:9", "grams": 68.0, "cal": 160.0, "fat": 1.0, "sodium": 140.0, "carb": 30.0, "fiber": 6.0, "protein": 10.0}, {"name": "Chicken - Chunk (Kirkland)", "grams": 65.0, "cal": 69.6, "fat": 1.16, "sodium": 313.4, "carb": 0.0, "fiber": 0.0, "protein": 15.09}, {"name": "Mayonnaise - Real (Duke's)", "grams": 14.0, "cal": 100.0, "fat": 12.0, "sodium": 70.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Cucumber English", "grams": 100.0, "cal": 15.0, "fat": 0.1, "sodium": 2.0, "carb": 3.6, "fiber": 0.5, "protein": 0.7}, {"name": "Carrots - Organic Whole (Marketside)", "grams": 78.0, "cal": 30.0, "fat": 0.0, "sodium": 60.1, "carb": 7.0, "fiber": 2.0, "protein": 1.0}, {"name": "Orange Navel - Peeled", "grams": 165.0, "cal": 81.0, "fat": 0.25, "sodium": 1.7, "carb": 20.71, "fiber": 3.6, "protein": 1.5}], "meal_cal": 455.6}, {"meal": 3, "items": [{"name": "Squash, winter, butternut, raw", "grams": 200.0, "cal": 83.4, "fat": 0.34, "sodium": 0.0, "carb": 21.0, "fiber": 3.92, "protein": 2.3}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Tomatoes Slicing", "grams": 100.0, "cal": 16.9, "fat": 0.0, "sodium": 13.5, "carb": 3.38, "fiber": 0.68, "protein": 0.68}, {"name": "Olive Oil", "grams": 13.0, "cal": 111.0, "fat": 12.95, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 511.3}], "totals": {"cal": 1456.8, "fat": 50.3, "sodium": 1435.8, "carb": 199.7, "fiber": 32.7, "protein": 73.8}, "had_duplicates": false}, "2026-10-27": {"meals": [{"meal": 1, "items": [{"name": "Cottage Cheese 2% (Daisy)", "grams": 113.0, "cal": 89.9, "fat": 2.5, "sodium": 330.0, "carb": 4.99, "fiber": 0.0, "protein": 13.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}], "meal_cal": 179.9}, {"meal": 2, "items": [{"name": "Tomatoes - Diced Organic (Kirkland)", "grams": 120.0, "cal": 25.0, "fat": 0.0, "sodium": 220.0, "carb": 5.0, "fiber": 1.0, "protein": 1.0}, {"name": "Rice - Brown & Quinoa (Minute)", "grams": 125.0, "cal": 220.0, "fat": 4.0, "sodium": 190.0, "carb": 42.0, "fiber": 4.0, "protein": 5.0}, {"name": "Lentils - Dry (Food to Live)", "grams": 150.0, "cal": 135.0, "fat": 0.81, "sodium": 75.0, "carb": 21.92, "fiber": 6.92, "protein": 10.04}, {"name": "Olive Oil", "grams": 10.0, "cal": 85.4, "fat": 9.96, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Chicken Marinara w/ Parmesan (Cafe Steamers)", "grams": 269.0, "cal": 280.0, "fat": 6.0, "sodium": 550.0, "carb": 35.99, "fiber": 4.01, "protein": 19.99}], "meal_cal": 745.4}, {"meal": 3, "items": [{"name": "Squash, winter, butternut, raw", "grams": 300.0, "cal": 125.1, "fat": 0.51, "sodium": 0.0, "carb": 31.5, "fiber": 5.88, "protein": 3.45}, {"name": "Butter (Kerrygold)", "grams": 28.0, "cal": 200.0, "fat": 24.0, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 325.1}], "totals": {"cal": 1250.4, "fat": 47.8, "sodium": 1495.0, "carb": 154.4, "fiber": 21.8, "protein": 61.5}, "had_duplicates": false}, "2026-10-28": {"meals": [{"meal": 1, "items": [{"name": "Cheerios Oat Cereal", "grams": 39.0, "cal": 140.0, "fat": 2.5, "sodium": 190.0, "carb": 29.0, "fiber": 4.0, "protein": 5.0}, {"name": "Milk - Skim (Kemp's)", "grams": 236.0, "cal": 90.0, "fat": 0.0, "sodium": 130.0, "carb": 13.0, "fiber": 0.0, "protein": 8.99}, {"name": "Applesauce - Granny Smith (Mott's)", "grams": 111.0, "cal": 50.0, "fat": 0.0, "sodium": 0.0, "carb": 13.0, "fiber": 1.0, "protein": 0.0}], "meal_cal": 280.0}, {"meal": 2, "items": [{"name": "Lentils - Dry (Food to Live)", "grams": 175.0, "cal": 157.5, "fat": 0.94, "sodium": 87.5, "carb": 25.58, "fiber": 8.08, "protein": 11.71}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 27.0, "cal": 163.6, "fat": 13.91, "sodium": 45.0, "carb": 5.73, "fiber": 2.45, "protein": 6.54}, {"name": "Salmon Pink - Wild Alaskan Caught", "grams": 85.0, "cal": 80.0, "fat": 1.5, "sodium": 240.0, "carb": 0.0, "fiber": 0.0, "protein": 17.0}, {"name": "Brussels Sprouts Frozen", "grams": 28.0, "cal": 11.5, "fat": 0.0, "sodium": 4.9, "carb": 2.31, "fiber": 0.99, "protein": 0.99}, {"name": "Olive Oil", "grams": 10.0, "cal": 85.4, "fat": 9.96, "sodium": 0.0, "carb": 0.0, "fiber": 0.0, "protein": 0.0}], "meal_cal": 578.0}, {"meal": 3, "items": [{"name": "Chicken Marinara w/ Parmesan (Cafe Steamers)", "grams": 269.0, "cal": 280.0, "fat": 6.0, "sodium": 550.0, "carb": 35.99, "fiber": 4.01, "protein": 19.99}, {"name": "Bread - Ezekiel 4:9", "grams": 34.0, "cal": 80.0, "fat": 0.5, "sodium": 70.0, "carb": 15.0, "fiber": 3.0, "protein": 5.0}, {"name": "Peanut Butter - Simply Creamy (Jif)", "grams": 26.0, "cal": 157.6, "fat": 13.4, "sodium": 43.3, "carb": 5.51, "fiber": 2.36, "protein": 6.3}, {"name": "Cherries Dark - Pitted (Frozen)", "grams": 140.0, "cal": 90.0, "fat": 0.0, "sodium": 0.0, "carb": 21.99, "fiber": 3.0, "protein": 0.99}], "meal_cal": 607.6}], "totals": {"cal": 1465.6, "fat": 49.2, "sodium": 1430.7, "carb": 182.1, "fiber": 31.9, "protein": 87.5}, "had_duplicates": false}};
+
+      const GOALS = {
+        cal: { label: "Calories", unit: "kcal", min: 1450, max: 1550 },
+        fat: { label: "Fat", unit: "g", min: 33, max: 58 },
+        sodium: { label: "Sodium", unit: "mg", min: 1000, max: 2000 },
+        carb: { label: "Carbs", unit: "g", min: 169, max: 244 },
+        fiber: { label: "Fiber", unit: "g", min: 27, max: 33 },
+        protein: { label: "Protein", unit: "g", min: 56, max: 94 },
+      };
+
+      // Percent-of-calories thresholds, derived from the calorie GOAL's midpoint
+      // (1500 kcal) applied to each macro's own gram range -- matches the
+      // National Academy of Medicine's AMDR standard exactly for fat/carbs,
+      // and Dan's own personalized, narrower band for protein.
+      const PCT_GOALS = {
+        fat: { label: "Fat (% Cal.)", min: 20, max: 35 },
+        carb: { label: "Carbs (% Cal.)", min: 45, max: 65 },
+        protein: { label: "Protein (% Cal.)", min: 15, max: 25 },
+      };
+
+      // Computed from THIS day's own real macros (macro-derived total as the
+      // denominator), never from the logged calorie total -- matches Dan's
+      // established Numbers formula exactly, guaranteeing the three always
+      // sum to ~100% before rounding.
+      function computeMacroPercents(totals) {
+        const fatCal = totals.fat * 9;
+        const carbCal = totals.carb * 4;
+        const proteinCal = totals.protein * 4;
+        const denom = fatCal + carbCal + proteinCal;
+        if (denom <= 0) return { fat: 0, carb: 0, protein: 0 };
+        return {
+          fat: Math.round((fatCal / denom) * 100),
+          carb: Math.round((carbCal / denom) * 100),
+          protein: Math.round((proteinCal / denom) * 100),
+        };
+      }
+
+      const allDates = Object.keys(DATA).sort();
+      let activeDate = allDates[0];
+
+      // Subtitle: number of logged days and their date range
+      (function fillSubtitle() {
+        const el = document.getElementById("reportSubtitle");
+        if (!el || allDates.length === 0) return;
+        const sorted = [...allDates].sort();
+        const first = sorted[0];
+        const last = sorted[sorted.length - 1];
+        const fmt = (s, withYear) => {
+          const [y, m, d] = s.split("-").map(Number);
+          const opts = withYear
+            ? { month: "short", day: "numeric", year: "numeric" }
+            : { month: "short", day: "numeric" };
+          return new Date(y, m - 1, d).toLocaleDateString("en-US", opts);
+        };
+        const sameYear = first.slice(0, 4) === last.slice(0, 4);
+        el.textContent =
+          `${allDates.length} days logged · ` +
+          `${fmt(first, !sameYear)} – ${fmt(last, true)}`;
+      })();
+      let printSelected = new Set(allDates); // defaults to everything, matching the "here's my two months" framing
+
+      function daysInMonth(year, month) {
+        return new Date(year, month + 1, 0).getDate();
+      }
+      // ---------- Continuous week-strip builder ----------
+      // Sunday-to-Saturday rows from WINDOW_START through the end of WINDOW_END's week.
+      // The 1st of each month shows its month abbreviation, with a step line marking the change.
+      // mode: 'nav' or 'select', same behavior as buildMonthCalendar
+
+      function buildWeekStrip(mode) {
+        const container = document.createElement("div");
+        container.className = "month-block week-strip";
+
+        const [sy, sm, sd] = WINDOW_START.split("-").map(Number);
+        const [ey, em, ed] = WINDOW_END.split("-").map(Number);
+        const start = new Date(sy, sm - 1, sd);
+        const end = new Date(ey, em - 1, ed);
+        end.setDate(end.getDate() + (6 - end.getDay()));
+
+        const title = document.createElement("div");
+        title.className = "month-title";
+        title.textContent =
+          MONTH_NAMES[start.getMonth()].slice(0, 3) +
+          " " +
+          start.getDate() +
+          " – " +
+          MONTH_NAMES[end.getMonth()].slice(0, 3) +
+          " " +
+          end.getDate() +
+          ", " +
+          end.getFullYear();
+        container.appendChild(title);
+
+        const weekdayRow = document.createElement("div");
+        weekdayRow.className = "weekday-row";
+        if (mode === "select")
+          weekdayRow.style.gridTemplateColumns = "18px repeat(7, 1fr)";
+        weekdayRow.innerHTML =
+          (mode === "select" ? "<span></span>" : "") +
+          ["S", "M", "T", "W", "T", "F", "S"]
+            .map((d) => `<span>${d}</span>`)
+            .join("");
+        container.appendChild(weekdayRow);
+
+        const day = new Date(start);
+        while (day <= end) {
+          const weekRow = document.createElement("div");
+          weekRow.className = mode === "select" ? "modal-week-row" : "week-row";
+
+          const weekDayNums = [];
+          let toggleBtn = null;
+          if (mode === "select") {
+            toggleBtn = document.createElement("button");
+            toggleBtn.className = "week-toggle";
+            toggleBtn.title = "Toggle this week";
+            weekRow.appendChild(toggleBtn);
+          }
+
+          for (let i = 0; i < 7; i++) {
+            const y = day.getFullYear(),
+              m = day.getMonth(),
+              d = day.getDate();
+            const dateStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            const hasData = !!DATA[dateStr];
+            const cell = document.createElement("button");
+            cell.textContent = d === 1 ? MONTH_NAMES[m].slice(0, 3) : d;
+            cell.className = "day-cell " + (hasData ? "has-data" : "no-data");
+            if (d <= 7) cell.classList.add("month-first-week");
+            if (d === 1) cell.classList.add("month-start");
+            if (d === 1 && i > 0) cell.classList.add("month-start-mid");
+            if (hasData) {
+              cell.dataset.date = dateStr;
+              weekDayNums.push(dateStr);
+              if (mode === "nav") {
+                if (dateStr === activeDate) cell.classList.add("active-day");
+                cell.onclick = () => scrollToDay(dateStr);
+              } else {
+                if (printSelected.has(dateStr)) cell.classList.add("selected");
+                cell.onclick = () => {
+                  toggleDayPrint(dateStr);
+                };
+              }
+            }
+            weekRow.appendChild(cell);
+            day.setDate(day.getDate() + 1);
+          }
+
+          if (mode === "select") {
+            toggleBtn.onclick = () => toggleWeekPrint(weekDayNums);
+          }
+          container.appendChild(weekRow);
+        }
+        return container;
+      }
+
+      // ---------- Shared month-grid builder ----------
+      // mode: 'nav'    -> click scrolls to day; single active-day highlight
+      // mode: 'select' -> click toggles printSelected; multi-select + week toggle
+      function buildMonthCalendar(year, month, monthName, mode) {
+        const container = document.createElement("div");
+        container.className = "month-block";
+
+        const title = document.createElement("div");
+        title.className = "month-title";
+        title.textContent = monthName + " " + year;
+        container.appendChild(title);
+
+        const weekdayRow = document.createElement("div");
+        weekdayRow.className = "weekday-row";
+        if (mode === "select")
+          weekdayRow.style.gridTemplateColumns = "18px repeat(7, 1fr)";
+        weekdayRow.innerHTML =
+          (mode === "select" ? "<span></span>" : "") +
+          ["S", "M", "T", "W", "T", "F", "S"]
+            .map((d) => `<span>${d}</span>`)
+            .join("");
+        container.appendChild(weekdayRow);
+
+        const firstOfMonth = new Date(year, month, 1);
+        const startWeekday = firstOfMonth.getDay();
+        const totalDays = daysInMonth(year, month);
+        let dayNum = 1 - startWeekday;
+
+        while (dayNum <= totalDays) {
+          const weekRow = document.createElement("div");
+          weekRow.className = mode === "select" ? "modal-week-row" : "week-row";
+
+          const weekDayNums = [];
+          let toggleBtn = null;
+          if (mode === "select") {
+            toggleBtn = document.createElement("button");
+            toggleBtn.className = "week-toggle";
+            toggleBtn.title = "Toggle this week";
+            weekRow.appendChild(toggleBtn);
+          }
+
+          for (let i = 0; i < 7; i++) {
+            const cell = document.createElement("button");
+            const d = dayNum;
+            if (d < 1 || d > totalDays) {
+              cell.className = "day-cell empty";
+            } else {
+              const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+              const hasData = !!DATA[dateStr];
+              cell.textContent = d;
+              cell.className = "day-cell " + (hasData ? "has-data" : "no-data");
+              if (hasData) {
+                cell.dataset.date = dateStr;
+                weekDayNums.push(dateStr);
+                if (mode === "nav") {
+                  if (dateStr === activeDate) cell.classList.add("active-day");
+                  cell.onclick = () => scrollToDay(dateStr);
+                } else {
+                  if (printSelected.has(dateStr))
+                    cell.classList.add("selected");
+                  cell.onclick = () => {
+                    toggleDayPrint(dateStr);
+                  };
+                }
+              }
+            }
+            weekRow.appendChild(cell);
+            dayNum++;
+          }
+
+          if (mode === "select") {
+            toggleBtn.onclick = () => toggleWeekPrint(weekDayNums);
+          }
+          container.appendChild(weekRow);
+        }
+
+        return container;
+      }
+
+      // ---------- Navigation (sidebar) ----------
+      const MONTH_NAMES = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+
+      function getWindowMonths() {
+        const [sy, sm] = WINDOW_START.split("-").map(Number);
+        const [ey, em] = WINDOW_END.split("-").map(Number);
+        const months = [];
+        let y = sy,
+          m = sm;
+        while (y < ey || (y === ey && m <= em)) {
+          months.push([y, m - 1, MONTH_NAMES[m - 1]]);
+          m++;
+          if (m > 12) {
+            m = 1;
+            y++;
+          }
+        }
+        return months;
+      }
+
+      function renderNavCalendars() {
+        const container = document.getElementById("navCalendars");
+        container.innerHTML = "";
+        container.appendChild(buildWeekStrip("nav"));
+      }
+
+      // A click sets the highlight itself; the scrollspy stays paused
+      // until the resulting scroll has stopped, so it can't override it.
+      let spyPaused = false;
+      let spyResumeTimer = null;
+      function resumeSpy() {
+        spyPaused = false;
+      }
+      function pauseSpyUntilScrollStops() {
+        spyPaused = true;
+        clearTimeout(spyResumeTimer);
+        spyResumeTimer = setTimeout(resumeSpy, 400);
+      }
+      document.addEventListener(
+        "scroll",
+        () => {
+          if (!spyPaused) return;
+          clearTimeout(spyResumeTimer);
+          spyResumeTimer = setTimeout(resumeSpy, 200);
+        },
+        true,
+      );
+
+      function scrollToDay(dateStr, instant = false) {
+        const el = document.querySelector(`.day-block[data-date="${dateStr}"]`);
+        if (!el) return;
+        activeDate = dateStr;
+        renderNavCalendars();
+        pauseSpyUntilScrollStops();
+        el.scrollIntoView({
+          behavior: instant ? "instant" : "smooth",
+          block: "start",
+        });
+      }
+
+      // ---------- Scrollspy ----------
+      let observer;
+      function setupScrollspy() {
+        if (observer) observer.disconnect();
+        observer = new IntersectionObserver(
+          (entries) => {
+            if (spyPaused) return;
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const d = entry.target.dataset.date;
+                if (d && d !== activeDate) {
+                  activeDate = d;
+                  renderNavCalendars();
+                }
+              }
+            });
+          },
+          { rootMargin: "0px 0px -70% 0px", threshold: 0 },
+        );
+
+        document
+          .querySelectorAll(".day-block")
+          .forEach((el) => observer.observe(el));
+      }
+
+      // ---------- Print-scope modal ----------
+      function openPrintModal() {
+        renderModalCalendars();
+        document.getElementById("printModal").classList.add("open");
+      }
+      function closePrintModal() {
+        document.getElementById("printModal").classList.remove("open");
+      }
+      function renderModalCalendars() {
+        const container = document.getElementById("modalCalendars");
+        container.innerHTML = "";
+        getWindowMonths().forEach(([y, m, name]) => {
+          container.appendChild(buildMonthCalendar(y, m, name, "select"));
+        });
+        document.getElementById("printCount").textContent =
+          `${printSelected.size} of ${allDates.length} days selected`;
+      }
+      function toggleDayPrint(dateStr) {
+        if (printSelected.has(dateStr)) printSelected.delete(dateStr);
+        else printSelected.add(dateStr);
+        renderModalCalendars();
+      }
+      function toggleWeekPrint(dateStrs) {
+        if (dateStrs.length === 0) return;
+        const allSel = dateStrs.every((d) => printSelected.has(d));
+        dateStrs.forEach((d) =>
+          allSel ? printSelected.delete(d) : printSelected.add(d),
+        );
+        renderModalCalendars();
+      }
+      function printSelectAll() {
+        printSelected = new Set(allDates);
+        renderModalCalendars();
+      }
+      function printSelectNone() {
+        printSelected = new Set();
+        renderModalCalendars();
+      }
+
+      function doPrint() {
+        const orderedPrintDates = allDates.filter((d) => printSelected.has(d));
+        document.querySelectorAll(".day-block").forEach((el) => {
+          const d = el.dataset.date;
+          const isFirstPrinted = d === orderedPrintDates[0];
+          el.classList.toggle("print-exclude", !printSelected.has(d));
+          el.classList.toggle(
+            "page-break-before",
+            printSelected.has(d) && !isFirstPrinted,
+          );
+        });
+        closePrintModal();
+        window.print();
+      }
+
+      // ---------- Day detail rendering (always all days, continuous) ----------
+      function badgeFor(val, min, max) {
+        if (val < min) return "badge-low";
+        if (val > max) return "badge-high";
+        return "badge-ok";
+      }
+      function badgeText(val, min, max) {
+        if (val < min) return "LOW";
+        if (val > max) return "HIGH";
+        return "OK";
+      }
+      function formatDate(dateStr) {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const dt = new Date(y, m - 1, d);
+        return dt.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+
+      function renderDayList() {
+        const container = document.getElementById("dayList");
+        container.innerHTML = "";
+
+        allDates.forEach((dateStr) => {
+          const day = DATA[dateStr];
+          const block = document.createElement("div");
+          block.className = "day-block";
+          block.dataset.date = dateStr;
+
+          const calDot =
+            "dot-" +
+            badgeFor(day.totals.cal, GOALS.cal.min, GOALS.cal.max).replace(
+              "badge-",
+              "",
+            );
+          let html = `<div class="day-block-header"><h3 class="day-date">${formatDate(dateStr)}</h3><span class="cal-badge">${day.totals.cal.toFixed(0)} kcal<span class="metric-dot ${calDot}"></span></span></div>`;
+          if (day.had_duplicates) {
+            html += `<p class="day-note">Duplicate log entries for this day were detected and removed before totals were computed.</p>`;
+          }
+
+          day.meals.forEach((m) => {
+            html += `<div class="meal-group">`;
+            html += `<div class="meal-label">Meal ${m.meal}<span class="meal-cal">${m.meal_cal.toFixed(0)} kcal</span></div>`;
+            html += `<div class="meal-items">`;
+            m.items.forEach((it) => {
+              html += `<div class="item-row"><span class="item-name">${it.name}</span><span class="item-meta">${it.grams.toFixed(0)}g &middot; ${it.cal.toFixed(0)} kcal</span></div>`;
+            });
+            html += `</div></div>`;
+          });
+
+          function metricCell(label, val, unit, min, max) {
+            const dot = "dot-" + badgeFor(val, min, max).replace("badge-", "");
+            const displayVal =
+              typeof val === "number" && unit !== "%" ? val.toFixed(1) : val;
+            return `
+        <div class="metric-cell">
+          <div class="metric-label">${label}</div>
+          <div class="metric-value">${displayVal}${unit}<span class="metric-dot ${dot}"></span></div>
+          <div class="metric-target">${min}&ndash;${max}${unit}</div>
+        </div>`;
+          }
+
+          const pct = computeMacroPercents(day.totals);
+
+          html += `<div class="summary-compact">`;
+          html += `<div class="summary-row">`;
+          html += metricCell(
+            "Fat",
+            day.totals.fat,
+            "g",
+            GOALS.fat.min,
+            GOALS.fat.max,
+          );
+          html += metricCell(
+            "Carbs",
+            day.totals.carb,
+            "g",
+            GOALS.carb.min,
+            GOALS.carb.max,
+          );
+          html += metricCell(
+            "Fiber",
+            day.totals.fiber,
+            "g",
+            GOALS.fiber.min,
+            GOALS.fiber.max,
+          );
+          html += metricCell(
+            "Protein",
+            day.totals.protein,
+            "g",
+            GOALS.protein.min,
+            GOALS.protein.max,
+          );
+          html += `</div>`;
+          html += `<div class="summary-row">`;
+          html += metricCell(
+            "Sodium",
+            day.totals.sodium,
+            "mg",
+            GOALS.sodium.min,
+            GOALS.sodium.max,
+          );
+          html += metricCell(
+            "Fat (% Cal.)",
+            pct.fat,
+            "%",
+            PCT_GOALS.fat.min,
+            PCT_GOALS.fat.max,
+          );
+          html += metricCell(
+            "Carbs (% Cal.)",
+            pct.carb,
+            "%",
+            PCT_GOALS.carb.min,
+            PCT_GOALS.carb.max,
+          );
+          html += metricCell(
+            "Protein (% Cal.)",
+            pct.protein,
+            "%",
+            PCT_GOALS.protein.min,
+            PCT_GOALS.protein.max,
+          );
+          html += `</div>`;
+          html += `</div>`;
+
+          block.innerHTML = html;
+          container.appendChild(block);
+        });
+      }
+
+      renderDayList();
+      renderNavCalendars();
+      setupScrollspy();
+
+      // Land on the most recent logged day by default -- this is always the
+      // same day the email's summary was drawn from, so no URL parameter or
+      // generation-time tagging is needed at all.
+      //
+      // Wait for fonts to finish loading (and one extra animation frame for
+      // layout to settle) before scrolling -- calling scrollIntoView() before
+      // the page's true height is established can get silently overridden
+      // by a later layout shift, with no error thrown.
+      if (allDates.length > 0) {
+        const targetDate = allDates[allDates.length - 1];
+        const doScroll = () => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => scrollToDay(targetDate, true));
+          });
+        };
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(doScroll);
+        } else {
+          doScroll();
+        }
+      }
+    </script>
+  </body>
+</html>
